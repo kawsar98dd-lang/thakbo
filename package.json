@@ -5,7 +5,8 @@
   "type": "module",
   "description": "THAKBO — location-first accommodation discovery marketplace for Bangladesh.",
   "engines": {
-    "node": ">=22.22.0"
+    "node": ">=22.22.0",
+    "npm": ">=10.9.0"
   },
   "scripts": {
     "dev": "react-router dev",
@@ -29,25 +30,30 @@
     "kysely-d1": "^0.4.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "react-router": "^8.4.0",
+    "react-router": "8.4.0",
     "zod": "^4.0.0"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "^1.42.0",
+    "@cloudflare/vite-plugin": "^1.62.3",
     "@eslint/js": "^9.0.0",
-    "@react-router/dev": "^8.4.0",
-    "@tailwindcss/vite": "^4.1.0",
+    "@react-router/dev": "8.4.0",
+    "@tailwindcss/vite": "^4.2.2",
     "@types/node": "^22.0.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "eslint": "^9.0.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "globals": "^16.0.0",
-    "tailwindcss": "^4.1.0",
+    "tailwindcss": "^4.2.2",
     "typescript": "^5.9.0",
     "typescript-eslint": "^8.0.0",
     "vite": "^8.0.0",
-    "vitest": "^4.0.0",
-    "wrangler": "^4.103.0"
+    "vitest": "^4.1.0",
+    "wrangler": "^4.145.0"
+  },
+  "overrides": {
+    "@vitejs/devtools-vitest": {
+      "vitest": "^4.1.0"
+    }
   }
 }

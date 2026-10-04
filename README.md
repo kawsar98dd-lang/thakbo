@@ -21,10 +21,10 @@ It starts in **Rajshahi** but is built for many cities. One account lets a perso
 | Code, configuration, migrations, README, CI workflow written | ✅ Done |
 | SQL migrations + seed run on a real SQLite engine (also repeated automatically in CI by `scripts/verify-sql.py`) | ✅ Verified (in the authoring environment) |
 | Syntax check of all `.ts/.tsx` files | ✅ No syntax errors (**not** a full type-check) |
-| `npm install` (dependency resolution) | ⏳ **Not yet executed** — runs in GitHub Actions |
+| `npm install` (dependency resolution) | ⏳ **Not yet verified.** The first GitHub run **failed** here (`Cannot read properties of null (reading 'edgesOut')`); the cause was diagnosed and fixed (see "Dependency notes"), but the fix has **not** been confirmed by a new run yet |
 | Type-check, lint, unit tests, production build | ⏳ **Not yet executed** — run in GitHub Actions |
 | Worker runtime, server rendering, Better Auth sign-up/login against a real D1 database | ❌ **Never tested** — needs Cloudflare resources (see "Remaining risks") |
-| `package-lock.json` | ⏳ Not generated yet (see "GitHub Actions" → lockfile helper). It is never faked. |
+| `package-lock.json` | ⏳ Not generated yet — it can only be created where the npm registry is reachable (GitHub). Use the "THAKBO Generate lockfile" workflow. It is never faked. |
 
 The authoring environment had no internet access, so nothing that needs `npm` could run there. A green CI run is the proof; until it exists, treat the project as **unverified**.
 Package versions were chosen from current documentation; **the first CI run may reveal version or type problems — that is expected and is what CI is for.**
@@ -41,9 +41,36 @@ The owner does **not** need to run npm commands on a personal computer. GitHub A
 4. Wait a few minutes.
 5. **Green ✔ = verification passed. Red ✖ = something failed** — open the run, tap the failed step (for example "Type-check"), copy the log text and send it to the developer assistant.
 
-What THAKBO CI runs, in order: SQL migrations/seed check → install dependencies → type-check (`wrangler types`, `react-router typegen`, `tsc`) → ESLint → Vitest tests (including a Better Auth schema contract test) → production build → Cloudflare Worker dry-run (informational only).
+What THAKBO CI runs, in order: SQL migrations/seed check → install npm 11 → install dependencies (prints npm's debug log if it fails) → type-check (`wrangler types`, `react-router typegen`, `tsc`) → ESLint → Vitest tests (including a Better Auth schema contract test) → production build → Cloudflare Worker dry-run (informational only).
 
-**Lockfile (one tap):** until `package-lock.json` exists, CI uses `npm install`. When convenient, open *Actions → THAKBO Generate lockfile → Run workflow*. It creates the real lockfile on GitHub's server and saves it in the repository. After that, run THAKBO CI again; it automatically switches to the stricter `npm ci`. (If GitHub reports a permissions error: *Settings → Actions → General → Workflow permissions → Read and write permissions*.)
+**Lockfile (one tap):** until `package-lock.json` exists, CI uses `npm install` (and attaches the generated lockfile to the run as a downloadable "package-lock" artifact). The recommended way: open *Actions → THAKBO Generate lockfile → Run workflow*. It resolves all dependencies on GitHub's server, checks them with `npm ci --dry-run`, and saves the real `package-lock.json` into the repository. Afterwards run THAKBO CI again; it automatically switches to the stricter `npm ci`. (If GitHub reports a permissions error: *Settings → Actions → General → Workflow permissions → Read and write permissions*.)
+
+## Dependency notes (why the first install failed and what was changed)
+
+**Failure:** `npm error Cannot read properties of null (reading 'edgesOut')` during `npm install`.
+
+**Root cause:** a bug in npm 10.9's dependency resolver (the version bundled with Node 22), triggered by peer-dependency sets in the Vite 8 / Vitest tree. Documented evidence: another project reproduced the identical crash and verified the fix with `npx npm@10.9.2 install --package-lock-only` — Vite 8 has an optional peer on `@vitejs/devtools`, whose `@vitejs/devtools-vitest` declares the wildcard peer `vitest: "*"`; that wildcard can land on Vitest 5 even though the project asks for 4.x, and npm 10.9 crashes while building the peer set; npm 11 handles it. (Source: AgentWorkforce/relaycast pull request #370.) *I could not reproduce the crash myself because the authoring environment has no npm registry access; the fix follows that evidence and is confirmed only when a GitHub run goes green.*
+
+**Fixes (no `--legacy-peer-deps`, nothing suppressed):**
+1. `overrides` in `package.json` rewrites only the wildcard `vitest` peer of `@vitejs/devtools-vitest` to our own `^4.1.0` range. It works on every npm version, including Cloudflare's build environment.
+2. CI and the lockfile generator use the exact **npm 11.19.1** (npm 11 resolves this tree).
+3. A real `package-lock.json` (generated by GitHub) makes later installs use `npm ci`, which does not run the resolver at all.
+
+**Compatibility review of the key packages** (from package metadata/release notes; each item is also guarded by `tests/dependency-policy.test.ts` where it can be):
+
+| Package | Range | Why |
+|---|---|---|
+| `react-router`, `@react-router/dev` | exactly `8.4.0` (both) | `@react-router/dev` 8.x hard-pins its `react-router` peer to the identical version |
+| `vite` | `^8.0.0` | React Router 8 needs Vite 7+; the Cloudflare plugin is tested on Vite 6, 7 and 8 |
+| `@cloudflare/vite-plugin` + `wrangler` | `^1.62.3` + `^4.145.0` | plugin 1.62.x declares peer `wrangler ^4.145.0` (the pair must move together) |
+| `tailwindcss`, `@tailwindcss/vite` | `^4.2.2` | Vite 8 support in `@tailwindcss/vite` starts at 4.2.2 |
+| `vitest` | `^4.1.0` | Vitest 5 was released 2026-09-03 and is not part of the verified combination |
+| `typescript` | `^5.9.0` | accepted by React Router's peer range (`^5.1 || ^6 || ^7`) |
+| `better-auth` + `kysely` + `kysely-d1` | `^1.3.0`, `^0.28.0`, `^0.4.0` | **not yet verified** — see "Better Auth decisions"; the schema contract test checks the installed version |
+
+If a future update breaks installation, change one family at a time and read the failed step's log (it now includes npm's debug log).
+
+**Cloudflare Workers Builds** (the dashboard's GitHub deploy) also runs `npm install`/`npm ci`: the `overrides` entry protects it, and the committed lockfile makes it deterministic — generate the lockfile before connecting the repository.
 
 ## Technology
 
@@ -56,7 +83,7 @@ What THAKBO CI runs, in order: SQL migrations/seed check → install dependencie
 | Sign-in | **Better Auth** (passwords, sessions, cookies — nothing home-made) |
 | Styling / validation / tests | Tailwind CSS v4 / Zod / Vitest |
 | Package manager | **npm** only |
-| Node.js | 22.22 or newer (CI uses the version in `.nvmrc`) |
+| Node.js / npm | Node 22.22+ (CI uses `.nvmrc`), npm 11.19.1 in CI (see "Dependency notes") |
 
 Additions beyond the blueprint (kept minimal): `kysely` + `kysely-d1` (how Better Auth talks to D1), `isbot` (standard server-rendering helper).
 
@@ -149,7 +176,7 @@ Server-side guards for `/dashboard/*` and `/admin/*` (admin role comes only from
 
 ## Troubleshooting
 * **Uploading `.github` from a phone:** some mobile browsers hide dot-folders. Use github.com's *Add file → Create new file* and type the path `.github/workflows/ci.yml`, pasting the file content; repeat for `generate-lockfile.yml`. Or ask for help — this can also be done in a free browser Codespace.
-* **CI red at "Install dependencies":** copy the log; usually a version conflict that the developer assistant fixes.
+* **CI red at "Install dependencies":** copy the lines under "Show npm debug log (only if install failed)" and the failing step; send both to the developer assistant.
 * **CI red at "Type-check", "Lint", "Unit tests" or "Production build":** copy the failing step's log.
 * `Invalid server configuration ... BETTER_AUTH_SECRET` → set the secret (Cloudflare step 6).
 * `no such table` → run the migrations (Cloudflare step 5).

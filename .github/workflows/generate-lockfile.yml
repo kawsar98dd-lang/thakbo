@@ -18,8 +18,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
-      - name: Create package-lock.json (no packages are installed or changed)
+      # Same exact npm as THAKBO CI (npm 10.9 crashes on this dependency tree; see README "Dependency notes").
+      - name: Install npm 11 (exact version)
+        run: npm install -g npm@11.19.1
+      - name: Create package-lock.json (resolves all dependencies on GitHub's server)
         run: npm install --package-lock-only --no-audit --no-fund
+      - name: Check the lockfile is installable and in sync
+        run: npm ci --dry-run --no-audit --no-fund
       - name: Save lockfile to the repository
         run: |
           if git diff --quiet -- package-lock.json && [ -f package-lock.json ] && git ls-files --error-unmatch package-lock.json >/dev/null 2>&1; then

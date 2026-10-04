@@ -34,20 +34,47 @@ jobs:
           # The npm cache needs a lockfile. It is switched on automatically once package-lock.json exists.
           cache: ${{ hashFiles('package-lock.json') != '' && 'npm' || '' }}
 
-      # No lockfile yet → "npm install" (this run proves the dependencies resolve).
-      # Lockfile present → "npm ci" (exact, repeatable versions).
+      # Node 22 ships npm 10.9, whose dependency resolver crashes ("Cannot read properties of null (reading 'edgesOut')")
+      # on peer-dependency sets involving vite 8 + vitest. npm 11 resolves them. Pinned to an exact version so every run
+      # (and the lockfile generator) uses the same resolver.
+      - name: Install npm 11 (exact version)
+        run: npm install -g npm@11.19.1
+
+      - name: Detect lockfile
+        id: lock
+        run: |
+          if [ -f package-lock.json ]; then echo "present=true" >> "$GITHUB_OUTPUT"; else echo "present=false" >> "$GITHUB_OUTPUT"; fi
+
+      # No lockfile yet -> "npm install" (this run proves the dependencies resolve).
+      # Lockfile present -> "npm ci" (exact, repeatable versions).
       - name: Install dependencies (npm install, no lockfile yet)
-        if: hashFiles('package-lock.json') == ''
+        if: steps.lock.outputs.present == 'false'
         run: npm install --no-audit --no-fund
 
       - name: Install dependencies (npm ci, lockfile present)
-        if: hashFiles('package-lock.json') != ''
+        if: steps.lock.outputs.present == 'true'
         run: npm ci --no-audit --no-fund
+
+      # If installation fails, print npm's own debug log so the real cause is visible in the run.
+      - name: Show npm debug log (only if install failed)
+        if: failure()
+        run: |
+          for f in "$HOME"/.npm/_logs/*.log; do echo "=== $f ==="; tail -n 120 "$f"; done || true
 
       - name: Show installed versions
         run: |
           node -v && npm -v
           npm ls --depth=0 || true
+          npm ls vite vitest react-router @react-router/dev @cloudflare/vite-plugin wrangler better-auth kysely || true
+
+      # Keep the freshly generated lockfile available even if a later step fails (download it from the run page).
+      - name: Upload generated lockfile
+        if: steps.lock.outputs.present == 'false'
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-lock
+          path: package-lock.json
+          if-no-files-found: ignore
 
       # Runs `wrangler types` + `react-router typegen` + `tsc --noEmit`.
       - name: Type-check
