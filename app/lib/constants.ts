@@ -1,0 +1,81 @@
+/** Single source of truth for domain enums and site-wide constants. Mirrors the SQL CHECK constraints. */
+
+export const SITE = {
+  name: "THAKBO",
+  nameBn: "থাকবো",
+  tagline: "Find Where You Belong.",
+  description:
+    "THAKBO helps you discover mess, rooms, flats, houses and sublets around the place you want to live in Bangladesh.",
+} as const;
+
+export const PROPERTY_TYPES = ["mess", "mess_seat", "room", "house", "flat", "sublet"] as const;
+export type PropertyType = (typeof PROPERTY_TYPES)[number];
+
+export const LISTING_STATUSES = ["draft", "pending", "published", "paused", "rejected", "deleted"] as const;
+export type ListingStatus = (typeof LISTING_STATUSES)[number];
+
+export const AVAILABILITY_STATUSES = ["available", "available_from", "unavailable", "rented", "occupied"] as const;
+export type AvailabilityStatus = (typeof AVAILABILITY_STATUSES)[number];
+
+export const AUDIENCES = ["student", "bachelor", "family", "male", "female"] as const;
+export type Audience = (typeof AUDIENCES)[number];
+
+export const REPORT_REASONS = [
+  "fake_listing",
+  "wrong_information",
+  "already_rented",
+  "inappropriate_content",
+  "spam",
+  "duplicate",
+  "other",
+] as const;
+export type ReportReason = (typeof REPORT_REASONS)[number];
+
+export const REPORT_STATUSES = ["pending", "reviewed", "resolved", "dismissed"] as const;
+export type ReportStatus = (typeof REPORT_STATUSES)[number];
+
+export const ADMIN_ROLES = ["admin", "moderator"] as const;
+export type AdminRole = (typeof ADMIN_ROLES)[number];
+
+export const SEARCH_SORTS = ["newest", "price_asc", "price_desc", "updated"] as const;
+export type SearchSort = (typeof SEARCH_SORTS)[number];
+
+export const PROPERTY_TYPE_LABELS: Record<PropertyType, string> = {
+  mess: "Mess",
+  mess_seat: "Mess seat",
+  room: "Room",
+  house: "House",
+  flat: "Flat",
+  sublet: "Sublet",
+};
+
+export const AUDIENCE_LABELS: Record<Audience, string> = {
+  student: "Student",
+  bachelor: "Bachelor",
+  family: "Family",
+  male: "Male",
+  female: "Female",
+};
+
+export const AVAILABILITY_LABELS: Record<AvailabilityStatus, string> = {
+  available: "Available now",
+  available_from: "Available from a date",
+  unavailable: "Unavailable",
+  rented: "Rented",
+  occupied: "Occupied",
+};
+
+export const SEARCH_SORT_LABELS: Record<SearchSort, string> = {
+  newest: "Newest",
+  price_asc: "Lowest price",
+  price_desc: "Highest price",
+  updated: "Recently updated",
+};
+
+export const SEARCH_LIMITS = { defaultPageSize: 20, maxPageSize: 50, maxPage: 100, maxRadiusKm: 25 } as const;
+
+export const MEDIA_LIMITS = {
+  maxImageBytes: 5 * 1024 * 1024,
+  maxImagesPerListing: 12,
+  allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
+} as const;

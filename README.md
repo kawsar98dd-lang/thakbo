@@ -1,1 +1,155 @@
-# thakbo
+# THAKBO (থাকবো) — *Find Where You Belong.*
+
+THAKBO is a **location-first accommodation marketplace for Bangladesh** (mess, mess seats, rooms, flats, houses, sublets).
+It starts in **Rajshahi** but is built for many cities. One account lets a person both **search** and **list places**.
+
+> The project was first generated under the temporary name "NIVORA". The official working brand is now **THAKBO**.
+
+**Status: Milestone 1 — foundation. Written and hardened, but NOT yet verified by a real install/build. Verification happens in GitHub Actions (see below).**
+
+## বাংলায় সংক্ষেপে
+* আপনার কম্পিউটারে কিছু চালাতে হবে না। প্রজেক্ট GitHub-এ আপলোড করলে **GitHub Actions** নিজে ক্লাউডে সব যাচাই করবে।
+* GitHub-এ রিপোজিটরি খুলুন → **Actions** ট্যাব → **THAKBO CI** → সবুজ ✔ মানে পাস, লাল ✖ মানে ব্যর্থ। লাল হলে ব্যর্থ ধাপের লগ কপি করে আমাকে পাঠান; আমি ঠিক করে দেব।
+* Cloudflare-এর D1/R2 এখনো তৈরি হয়নি। কীভাবে তৈরি করবেন তা নিচে "Cloudflare setup"-এ আছে।
+
+---
+
+## ⚠️ Verification status (honest summary)
+
+| Check | Status |
+|---|---|
+| Code, configuration, migrations, README, CI workflow written | ✅ Done |
+| SQL migrations + seed run on a real SQLite engine (also repeated automatically in CI by `scripts/verify-sql.py`) | ✅ Verified (in the authoring environment) |
+| Syntax check of all `.ts/.tsx` files | ✅ No syntax errors (**not** a full type-check) |
+| `npm install` (dependency resolution) | ⏳ **Not yet executed** — runs in GitHub Actions |
+| Type-check, lint, unit tests, production build | ⏳ **Not yet executed** — run in GitHub Actions |
+| Worker runtime, server rendering, Better Auth sign-up/login against a real D1 database | ❌ **Never tested** — needs Cloudflare resources (see "Remaining risks") |
+| `package-lock.json` | ⏳ Not generated yet (see "GitHub Actions" → lockfile helper). It is never faked. |
+
+The authoring environment had no internet access, so nothing that needs `npm` could run there. A green CI run is the proof; until it exists, treat the project as **unverified**.
+Package versions were chosen from current documentation; **the first CI run may reveal version or type problems — that is expected and is what CI is for.**
+
+---
+
+## GitHub Actions — the verification path (no computer needed)
+
+The owner does **not** need to run npm commands on a personal computer. GitHub Actions performs the verification in the cloud.
+
+1. **Upload the project to GitHub** (works from a phone browser): create a repository on github.com, then *Add file → Upload files* and upload the **contents** of the ZIP (unzip first; keep the `.github` folder). Hidden folders such as `.github` may be easier to upload with the free **GitHub Codespaces**/GitHub's web editor or a Git app; see Troubleshooting.
+2. Open the repository and tap the **Actions** tab.
+3. Open the workflow **THAKBO CI** (it starts by itself after every upload; or tap *Run workflow*).
+4. Wait a few minutes.
+5. **Green ✔ = verification passed. Red ✖ = something failed** — open the run, tap the failed step (for example "Type-check"), copy the log text and send it to the developer assistant.
+
+What THAKBO CI runs, in order: SQL migrations/seed check → install dependencies → type-check (`wrangler types`, `react-router typegen`, `tsc`) → ESLint → Vitest tests (including a Better Auth schema contract test) → production build → Cloudflare Worker dry-run (informational only).
+
+**Lockfile (one tap):** until `package-lock.json` exists, CI uses `npm install`. When convenient, open *Actions → THAKBO Generate lockfile → Run workflow*. It creates the real lockfile on GitHub's server and saves it in the repository. After that, run THAKBO CI again; it automatically switches to the stricter `npm ci`. (If GitHub reports a permissions error: *Settings → Actions → General → Workflow permissions → Read and write permissions*.)
+
+## Technology
+
+| Purpose | Choice |
+|---|---|
+| UI + server rendering | React 19, TypeScript (strict), **React Router v8** (framework mode, SSR on) |
+| Hosting/runtime | **Cloudflare Workers** (`@cloudflare/vite-plugin`) |
+| Database | **Cloudflare D1** (SQLite), plain SQL migrations, no ORM |
+| Image storage | **Cloudflare R2** (binding only, no keys) |
+| Sign-in | **Better Auth** (passwords, sessions, cookies — nothing home-made) |
+| Styling / validation / tests | Tailwind CSS v4 / Zod / Vitest |
+| Package manager | **npm** only |
+| Node.js | 22.22 or newer (CI uses the version in `.nvmrc`) |
+
+Additions beyond the blueprint (kept minimal): `kysely` + `kysely-d1` (how Better Auth talks to D1), `isbot` (standard server-rendering helper).
+
+```
+Browser → React Router → Cloudflare Worker ─┬─ Better Auth (/api/auth/*)
+                                            ├─ D1  (binding "DB")
+                                            └─ R2  (binding "MEDIA_BUCKET")
+```
+
+## Folder structure
+```
+.github/workflows/   ci.yml (verification) and generate-lockfile.yml (one-tap helper)
+app/routes.ts        all URLs;  app/routes/ pages + resource routes (auth API, robots.txt, sitemap.xml, api/health)
+app/components/      ui, layout, forms, listing, search
+app/lib/             pure shared code: constants, Zod validation, geo, cost, seo, routes
+app/server/          SERVER-ONLY: auth, sessions, middleware, logger, env, db/ (SQL + repositories), storage/ (R2)
+workers/app.ts       Worker entry point
+db/migrations/       numbered SQL migrations;  db/seeds/ reference data (no fake users/listings)
+tests/               unit tests;  scripts/verify-sql.py  SQL check used by CI
+wrangler.jsonc       Cloudflare configuration (bindings, no secrets, no fake ids)
+```
+
+## Environment variables and secrets
+| Name | Kind | Meaning |
+|---|---|---|
+| `BETTER_AUTH_SECRET` | secret | Signs login sessions; at least 32 random characters. **Required at runtime** (not needed for CI). |
+| `BETTER_AUTH_URL` | optional | Public site address; leave empty to auto-detect. |
+| `DB`, `MEDIA_BUCKET` | bindings in `wrangler.jsonc` | D1 and R2. No keys or passwords. |
+
+No secret is ever stored in Git. `.env.example` documents the names only. THAKBO has no browser-visible variables in Milestone 1.
+
+## Cloudflare setup (not done yet — nothing below has been created)
+
+**Resource names used by this project:** D1 database `thakbo-db`, R2 bucket `thakbo-media`, Worker `thakbo`. These names are only *configuration*: **no database or bucket exists until the owner creates them in their own Cloudflare account.** No database id, account id or key is stored in this repository.
+
+### Option A — Cloudflare dashboard (works from a phone browser)
+1. **D1:** dashboard → *Storage & Databases → D1 SQL database → Create* → name `thakbo-db`. Note its **Database ID**.
+2. **R2:** *R2 object storage → Create bucket* → name `thakbo-media` (R2 may ask for a payment method to enable its free tier — check Cloudflare's current terms).
+3. **Connect the Worker:** *Workers & Pages → Create → Import a repository* → choose your GitHub repo. Build command `npm run build`, deploy command `npx wrangler deploy`.
+4. **Bind the database:** `wrangler.jsonc` needs the database id inside the `d1_databases` entry. Add one line `"database_id": "<your id>",` using GitHub's web editor (pencil icon) — or ask the developer assistant to do it for you if you send the id (the id is not a secret). *Unverified:* recent Wrangler versions can create missing resources automatically on deploy; if this works for you the step is unnecessary.
+5. **Create the tables:** D1 → `thakbo-db` → *Console*: paste and run each file from `db/migrations/` **in order** (`0000` … `0005`), then optionally `db/seeds/0001_reference_data.sql` (safe to run twice).
+6. **Secret:** Worker → *Settings → Variables and Secrets → Add* → `BETTER_AUTH_SECRET` = a long random text (type "Secret").
+7. Open `https://<your-worker>/api/health` — expected `{"status":"ok","database":"ok"}`.
+
+### Option B — Wrangler commands (needs a terminal, e.g. free GitHub Codespaces in a browser)
+```bash
+npx wrangler login
+npx wrangler d1 create thakbo-db            # prints database_id → add it to wrangler.jsonc
+npx wrangler r2 bucket create thakbo-media
+npm run db:migrate:remote                   # applies db/migrations in order
+npm run db:seed:remote                      # optional reference data
+npx wrangler secret put BETTER_AUTH_SECRET
+npm run deploy
+```
+Local development (Codespaces/any terminal): `cp .env.example .dev.vars`, fill `BETTER_AUTH_SECRET`, then `npm run db:migrate:local`, `npm run db:seed:local`, `npm run dev`.
+
+### First admin
+After registering a normal account, run in the D1 Console (replace the e-mail):
+```sql
+INSERT INTO admin_users (user_id, role) SELECT id, 'admin' FROM "user" WHERE email = 'you@example.com';
+```
+
+## Database notes
+* Migrations: `0000` Better Auth tables (+`rateLimit`), `0001` profiles/admin, `0002` locations, `0003` facilities, `0004` listings/images/facilities/audiences, `0005` favorites/reports. Never edit an applied migration — add a new numbered file.
+* Location chain country → division → district → city → area: **new cities are only new rows**, no code change.
+* Listings allow incomplete rows only while `status = 'draft'`; `status = 'deleted'` is a soft delete; money is whole taka; estimated monthly cost is calculated in code, never stored.
+* Seed data: Bangladesh → Rajshahi (approximate city centre, area coordinates intentionally empty) + 14 facilities. **No fake users or listings.**
+* All queries use bound parameters; the public search builder is unit-tested against injection.
+
+## Better Auth decisions
+* Better Auth handles password hashing, sessions and cookies. THAKBO contains no custom crypto.
+* D1 is accessed through Kysely (`kysely-d1`); a new Better Auth instance is created per request because D1 bindings exist only during a request.
+* Table columns are **camelCase** (`emailVerified`, `userId`, `expiresAt`, …) because that is what Better Auth's Kysely adapter uses by default. Dates are ISO text, booleans 0/1.
+* **`tests/auth-schema.test.ts` compares migration `0000` with the columns the installed Better Auth version actually asks for**, so a mismatch is reported by CI instead of causing a runtime surprise.
+* Sign-in/sign-up are rate-limited (5 per minute per rule), stored in D1 (`rateLimit` table). A profile row is created automatically for each new account.
+* Password reset and e-mail verification are **not enabled** (they need an e-mail provider).
+
+## Security summary
+Server-side guards for `/dashboard/*` and `/admin/*` (admin role comes only from `admin_users`); owner checks in SQL (`getOwnedListing`); cross-site POST check; open-redirect-safe login redirects; security headers on every response; log redaction of passwords/tokens/cookies; no `dangerouslySetInnerHTML` (lint-enforced); image uploads (future) validated by real file bytes, type and size, with server-generated object keys. A strict Content-Security-Policy and rate limiting beyond sign-in are planned for Milestone 8.
+
+## Remaining risks / known limitations
+* Not yet verified by a real install/build (CI will show).
+* Better Auth + D1 behaviour (D1 has no interactive transactions) has not been tested at runtime.
+* `app/server/*` repository files rely on React Router removing server-only imports from browser bundles; if the build reports a "server-only module" error, the developer assistant must rename those modules to `*.server.ts`.
+* Password reset, e-mail verification, contact form, image upload UI, map, favorites, reports and admin tools are not built (later milestones).
+* Fields from the MVP spec such as room/bathroom counts and an "account status" are not in the schema yet.
+
+## Milestones
+1 Foundation (this) · 2 Profiles, locations, facilities, listing foundation · 3 R2 upload + listing wizard · 4 Map + search + radius · 5 Listing details, favorites, contact, reports · 6 User dashboard · 7 Admin + moderation · 8 SEO, polish, performance, security, deployment.
+
+## Troubleshooting
+* **Uploading `.github` from a phone:** some mobile browsers hide dot-folders. Use github.com's *Add file → Create new file* and type the path `.github/workflows/ci.yml`, pasting the file content; repeat for `generate-lockfile.yml`. Or ask for help — this can also be done in a free browser Codespace.
+* **CI red at "Install dependencies":** copy the log; usually a version conflict that the developer assistant fixes.
+* **CI red at "Type-check", "Lint", "Unit tests" or "Production build":** copy the failing step's log.
+* `Invalid server configuration ... BETTER_AUTH_SECRET` → set the secret (Cloudflare step 6).
+* `no such table` → run the migrations (Cloudflare step 5).

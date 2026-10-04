@@ -1,0 +1,69 @@
+name: THAKBO CI
+
+# Automatic verification in GitHub's cloud. The project owner does not need to run anything locally:
+# open the repository → Actions tab → "THAKBO CI". Green check = everything passed. Red X = open the failed step.
+on:
+  push:
+  pull_request:
+  workflow_dispatch: # lets you press "Run workflow" from the GitHub mobile website
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Install, type-check, lint, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      # Independent of npm: proves the SQL migrations and seed data are valid on a real SQLite engine.
+      - name: Verify D1 migrations and seed data (SQLite)
+        run: python3 scripts/verify-sql.py
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          # The npm cache needs a lockfile. It is switched on automatically once package-lock.json exists.
+          cache: ${{ hashFiles('package-lock.json') != '' && 'npm' || '' }}
+
+      # No lockfile yet → "npm install" (this run proves the dependencies resolve).
+      # Lockfile present → "npm ci" (exact, repeatable versions).
+      - name: Install dependencies (npm install, no lockfile yet)
+        if: hashFiles('package-lock.json') == ''
+        run: npm install --no-audit --no-fund
+
+      - name: Install dependencies (npm ci, lockfile present)
+        if: hashFiles('package-lock.json') != ''
+        run: npm ci --no-audit --no-fund
+
+      - name: Show installed versions
+        run: |
+          node -v && npm -v
+          npm ls --depth=0 || true
+
+      # Runs `wrangler types` + `react-router typegen` + `tsc --noEmit`.
+      - name: Type-check
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Production build
+        run: npm run build
+
+      # Informational only: a deploy simulation needs no Cloudflare account, but it may complain about the
+      # D1 database id that you add only when you connect your own Cloudflare account.
+      - name: Cloudflare Worker dry run (informational)
+        continue-on-error: true
+        run: npx wrangler deploy --dry-run --outdir /tmp/worker-out
