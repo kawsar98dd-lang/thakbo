@@ -47,7 +47,10 @@ export const STATIC_SITEMAP_PATHS = [PATHS.home, PATHS.about, PATHS.howItWorks, 
 export function safeRedirectPath(input: string | null | undefined, fallback: string = PATHS.dashboard): string {
   if (!input) return fallback;
   if (!input.startsWith("/") || input.startsWith("//") || input.includes("\\")) return fallback;
-  if (/[\u0000-\u001f]/.test(input)) return fallback;
+  // Reject control characters (code points below 0x20), e.g. line breaks used for header injection.
+  for (let i = 0; i < input.length; i += 1) {
+    if (input.charCodeAt(i) < 0x20) return fallback;
+  }
   return input;
 }
 

@@ -18,7 +18,8 @@ export default tseslint.config(
       "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/consistent-type-imports": "error",
       "@typescript-eslint/ban-ts-comment": ["error", { "ts-ignore": "allow-with-description" }],
-      "no-console": ["error", { allow: [] }],
+      // "error" with no options = every console.* call is forbidden (the logger module is exempted below).
+      "no-console": "error",
       "no-restricted-syntax": [
         "error",
         { selector: "JSXAttribute[name.name='dangerouslySetInnerHTML']", message: "dangerouslySetInnerHTML is not allowed in THAKBO." },
