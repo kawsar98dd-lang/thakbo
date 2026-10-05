@@ -29,6 +29,7 @@ export const PATHS = {
   notFound: "/404",
   serverError: "/500",
   authApi: "/api/auth",
+  areasApi: "/api/areas",
 } as const;
 
 export const listingPath = (slug: string) => `/listing/${encodeURIComponent(slug)}`;

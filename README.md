@@ -5,7 +5,7 @@ It starts in **Rajshahi** but is built for many cities. One account lets a perso
 
 > The project was first generated under the temporary name "NIVORA". The official working brand is now **THAKBO**.
 
-**Status: Milestone 1 — foundation. Written and hardened, but NOT yet verified by a real install/build. Verification happens in GitHub Actions (see below).**
+**Status: Milestone 1 (foundation) is verified green in GitHub Actions. Milestone 2 (profiles, neighborhood-first locations, facilities, listing drafts) is implemented and awaiting its first GitHub Actions run — see "Milestone 2" below for exactly what was and was not verified.**
 
 ## বাংলায় সংক্ষেপে
 * আপনার কম্পিউটারে কিছু চালাতে হবে না। প্রজেক্ট GitHub-এ আপলোড করলে **GitHub Actions** নিজে ক্লাউডে সব যাচাই করবে।
@@ -71,6 +71,67 @@ What THAKBO CI runs, in order: SQL migrations/seed check → install npm 11 → 
 If a future update breaks installation, change one family at a time and read the failed step's log (it now includes npm's debug log).
 
 **Cloudflare Workers Builds** (the dashboard's GitHub deploy) also runs `npm install`/`npm ci`: the `overrides` entry protects it, and the committed lockfile makes it deterministic — generate the lockfile before connecting the repository.
+
+## Milestone 2 — neighborhood-first locations, profiles, facilities, listing drafts
+
+### How locations work
+THAKBO is **neighborhood-first**: people search and list with the place names they actually use (Hetem Khan, Ghoshpara, Shaheb Bazar, Talaimari), not wards or thanas.
+
+```
+Country → Division → District → City → Neighborhood (area) → optional Sub-area
+```
+* The administrative levels (`countries`, `divisions`, `districts`, `cities`) stay in the database as structure and metadata. `areas.thana` and `areas.ward` are optional internal metadata; users never have to choose them.
+* A **neighborhood** is a row in `areas` with a Bangla name (`name_bn`), English name (`name_en`), type (`neighborhood`, `para`, `residential_area`, `market_area`, `commercial_area`, `campus_area`, `landmark_area`, `road_area`, `other`), `search_priority`, coordinates (`latitude`/`longitude`, nullable), optional `radius_m`, and an active flag. A **sub-area** is just an area whose `parent_area_id` points to a neighborhood of the same city.
+* A place is "active" only if it **and every ancestor** is active. Inactive places never appear in selectors, search or sitemap.
+* Listings store `city_id`, `area_id` (the canonical neighborhood), optional `sub_area_id`, plus free text `address` and `landmark`. They never store the place name as loose text.
+* The server rejects a neighborhood that does not belong to the selected city (and a sub-area that does not belong to the neighborhood). This is checked in `app/server/listing-service.server.ts` and covered by tests; it is **not** a database constraint (see Limitations).
+
+### How aliases work
+Every neighborhood has several known spellings in the table `area_aliases` (for Hetem Khan: "Hetem Khan", "Hatem Khan", "হেতেম খান", "হেটেম খান", "হাতেম খান"). Each alias is stored with a `normalized_alias`, produced by `normalizeLocationText()` (`app/lib/location.ts`):
+* lower-cases; ignores spaces, punctuation and hyphens ("সাহেব বাজার" = "সাহেববাজার"); removes Latin accents and invisible joiner characters; collapses doubled Latin letters.
+* It does **not** guess vowels and does **not** transliterate between Bangla and English. "Hatem" and "Hetem" are different keys; the alias table connects them. This deliberately prevents unrelated places from merging.
+* `UNIQUE (city_id, normalized_alias)` makes an ambiguous alias impossible inside a city. Adding an alias that already belongs to another area is refused (`addAreaAlias` returns `alias_conflict`).
+* Search (`GET /api/areas?cityId=1&q=hatem`) ranks exact alias → alias starting with the text → alias containing it, returns one row per area, at most a handful of results, and tells the user which alias matched. No browser ever receives a full location list.
+
+### Growing from Rajshahi to all Bangladesh
+Nothing in the code mentions Rajshahi. A new city or neighborhood is only **new rows** (`createCity`, `createArea`, `addAreaAlias`, `setAreaActive`, `updateArea` in `app/server/db/repositories/locations.ts` — the functions the Milestone 7 admin screens will call). Aliases are scoped per city, indexes are per city, and autocomplete is server-side and capped, so thousands of neighborhoods across many cities stay fast. Public URLs such as `/city/rajshahi` and `/area/rajshahi/hetem-khan` already work from the same slugs.
+
+### Seed data
+* `db/seeds/0001_reference_data.sql` (unchanged) — Bangladesh, Rajshahi, 8 areas, 14 facilities.
+* `db/seeds/0002_neighborhoods_and_facilities.sql` — adds Hetem Khan and Ghoshpara, Bangla names, types, aliases for all 10 areas, Bangla/English facility labels, and 8 more facilities (Shared bathroom, Furnished, Semi-furnished, Balcony, Dining, Fan, AC, Washing machine).
+* **Both are idempotent** (safe to run repeatedly), contain no users and no listings, and use **NULL coordinates** instead of invented ones. This is only a bootstrap list: Rajshahi has many more neighborhoods, and the Bangla spellings should be reviewed by a local before launch.
+* The `normalized_alias` values in the seed are generated by `normalizeLocationText()`; `tests/location-repository.test.ts` re-computes every one and fails if they ever differ.
+
+### Database changes (new migrations only; nothing existing was edited, renamed or deleted)
+* `0006_neighborhood_locations.sql` — `is_active` on countries/divisions/districts; `name_en`/`name_bn` on cities; neighborhood columns on `areas` (names, `area_type`, `parent_area_id`, `radius_m`, `thana`, `ward`, `description`, `search_priority`); new table `area_aliases`; `listings.sub_area_id` and `listings.landmark`; `profiles.preferred_city_id`.
+* `0007_facility_labels_and_audiences.sql` — `name_en`, `name_bn`, `category` on facilities; `listing_audiences` rebuilt (existing rows copied) to allow `mixed` and `anyone`.
+
+**Apply them** with the same steps as before: `npm run db:migrate:remote` and `npm run db:seed:remote`, or — from the phone — paste `db/migrations/0006_…sql`, then `0007_…sql`, then the new seed file `db/seeds/0002_…sql` into the D1 console (run each file once, in this order). Migrations must not be run twice.
+
+### Profiles, listings, facilities
+* `/dashboard/profile` is functional: name, phone, WhatsApp, preferred city, bio. The profile that is read or updated is always the session user's; the browser never sends a user id, and avatar/roles cannot be changed from the form. One account system: seeker, owner and admin are not separate accounts (admin rights come only from the `admin_users` table).
+* `/dashboard/listings/new` creates a **private draft** with sections: basic information, type, audience, price, location (city → neighborhood search → optional sub-area, address, landmark), facilities, availability. Drafts may be incomplete. `/dashboard/listings` shows only your own non-deleted listings; `/dashboard/listings/:id/edit` edits only your own **drafts**; delete is a soft delete.
+* Facilities and audiences come from the database / shared constants, never from React components. A facility can be attached to a listing only once (primary key) and must exist and be active.
+* Drafts are never public: public pages and search only ever return `status = 'published'`.
+* Allowed owner status changes are listed in `OWNER_STATUS_TRANSITIONS` (`app/lib/constants.ts`). "Rented" is an availability status; "removed" is the existing `deleted` status. Submitting a draft for review is Milestone 3; moderation is Milestone 7.
+
+### Tests (Milestone 2)
+`tests/helpers/sqlite-d1.ts` runs the **real migrations and seed** on an in-memory SQLite database (Node's built-in `node:sqlite`), so repository and service tests exercise the true schema, constraints and SQL. New test files: `location-normalization`, `location-repository`, `location-validation`, `facilities-repository`, `profile-repository`, `profile-validation`, `listing-validation`, `listing-repository`, `listing-service`, `database-schema`, `auth-guards`.
+
+### Milestone 2 verification status
+| Check | Status |
+|---|---|
+| SQL migrations + both seeds (twice) on real SQLite (`scripts/verify-sql.py`) | ✅ passed in the authoring environment |
+| Repository / service / schema tests (location, facilities, profile, listing, schema) executed against real SQLite | ✅ passed in the authoring environment using a small stand-in test runner (not Vitest itself) |
+| Zod validation tests, auth-guard tests, `npm ci`, type-check, lint, Vitest, production build | ⏳ **Not run** in the authoring environment (no npm registry). They run in GitHub Actions. |
+
+### Limitations / decisions
+* **City ↔ area consistency is enforced in code, not by a database constraint.** SQLite cannot add a composite foreign key without rebuilding the `listings` table (risky with data). A future hardening migration can add it; until then every write goes through `listing-service.server.ts`.
+* **Property type `other`** is not added: it requires rebuilding `listings` (CHECK constraint) and its dependent tables. Add it in a dedicated migration if the business needs it. Existing types: mess, mess_seat, room, house, flat, sublet.
+* Listing statuses keep the existing set (`draft`, `pending`, `published`, `paused`, `rejected`, `deleted`); `rented` lives in `availability_status`.
+* Only the English/Bangla labels of cities, neighborhoods, facilities, property types and audiences exist. A full Bangla UI switch is not part of this milestone.
+* The neighborhood picker needs JavaScript (it loads results from `/api/areas`).
+* No image upload, map, radius search, favorites, contact flow or admin screens were added.
 
 ## Technology
 
@@ -172,7 +233,7 @@ Server-side guards for `/dashboard/*` and `/admin/*` (admin role comes only from
 * Fields from the MVP spec such as room/bathroom counts and an "account status" are not in the schema yet.
 
 ## Milestones
-1 Foundation (this) · 2 Profiles, locations, facilities, listing foundation · 3 R2 upload + listing wizard · 4 Map + search + radius · 5 Listing details, favorites, contact, reports · 6 User dashboard · 7 Admin + moderation · 8 SEO, polish, performance, security, deployment.
+1 Foundation ✅ · 2 Profiles, neighborhood-first locations, facilities, listing drafts (implemented, awaiting CI) · 3 R2 upload + listing wizard · 4 Map + search + radius · 5 Listing details, favorites, contact, reports · 6 User dashboard · 7 Admin + moderation · 8 SEO, polish, performance, security, deployment.
 
 ## Troubleshooting
 * **Uploading `.github` from a phone:** some mobile browsers hide dot-folders. Use github.com's *Add file → Create new file* and type the path `.github/workflows/ci.yml`, pasting the file content; repeat for `generate-lockfile.yml`. Or ask for help — this can also be done in a free browser Codespace.

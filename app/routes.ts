@@ -4,6 +4,7 @@ export default [
   // Resource routes (no UI).
   route("api/auth/*", "routes/api/auth.ts"),
   route("api/health", "routes/api/health.ts"),
+  route("api/areas", "routes/api/areas.ts"),
   route("logout", "routes/logout.ts"),
   route("robots.txt", "routes/seo/robots.ts"),
   route("sitemap.xml", "routes/seo/sitemap.ts"),

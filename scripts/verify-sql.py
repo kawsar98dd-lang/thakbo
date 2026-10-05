@@ -12,9 +12,10 @@ for path in sorted(glob.glob("db/migrations/*.sql")):
 
 counts = []
 for run in (1, 2):
-    con.executescript(open("db/seeds/0001_reference_data.sql", encoding="utf-8").read())
-    counts.append(tuple(con.execute(f"SELECT count(*) FROM {t}").fetchone()[0] for t in ("countries", "cities", "areas", "facilities")))
-    print(f"seed run {run}: countries/cities/areas/facilities =", counts[-1])
+    for seed in sorted(glob.glob("db/seeds/*.sql")):
+        con.executescript(open(seed, encoding="utf-8").read())
+    counts.append(tuple(con.execute(f"SELECT count(*) FROM {t}").fetchone()[0] for t in ("countries", "cities", "areas", "area_aliases", "facilities")))
+    print(f"seed run {run}: countries/cities/areas/aliases/facilities =", counts[-1])
 
 problems = con.execute("PRAGMA foreign_key_check").fetchall()
 tables = [r[0] for r in con.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")]

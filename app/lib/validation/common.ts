@@ -1,5 +1,9 @@
 import { z } from "zod";
 
+/** Empty / whitespace-only strings become `undefined` (HTML forms send "" for blank optional fields). */
+export const emptyToUndefined = (value: unknown): unknown =>
+  typeof value === "string" && value.trim() === "" ? undefined : value;
+
 /** Trimmed string that becomes `undefined` when empty (typical for optional HTML form fields). */
 export const optionalText = (max: number) =>
   z.preprocess(
