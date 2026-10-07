@@ -133,6 +133,55 @@ Nothing in the code mentions Rajshahi. A new city or neighborhood is only **new 
 * The neighborhood picker needs JavaScript (it loads results from `/api/areas`).
 * No image upload, map, radius search, favorites, contact flow or admin screens were added.
 
+## Production database initialization (manual GitHub workflow)
+
+The workflow **THAKBO Initialize Production D1** (`.github/workflows/initialize-production-db.yml`) creates the tables and reference data in the **existing** Cloudflare D1 database `thakbo-db` — no computer needed. It is **manual only** (no push/schedule trigger), completely separate from THAKBO CI, and it never creates, drops, resets or recreates a database and never deploys the Worker.
+
+### What it does, in order
+1. **Safety checks** — only on `main`; for `apply` you must type `THAKBO-DB`; both GitHub secrets must exist.
+2. **Self-test** of the tooling (offline, fake wrangler on real SQLite).
+3. **Preflight** — checks the 8 migration files are in the required order (0000 … 0007) and that no migration/seed contains destructive SQL (the only `DROP` allowed is the audience-table rebuild in 0007, which copies every row first); finds the **one existing** database named `thakbo-db` (by name, through the Cloudflare API) and reads its migration state. If the name is missing or ambiguous it stops. It does not edit `wrangler.jsonc`: the database id is written to a temporary config that is deleted at the end and never committed.
+4. **Migrate** — `wrangler d1 migrations apply thakbo-db --remote`. Wrangler records every applied file in the table `d1_migrations` (set explicitly in the temporary config), so applied files are skipped on re-runs. If something fails part-way the workflow stops: **no seeding, no verification**.
+5. **Seed** — `db/seeds/0001_reference_data.sql`, then `db/seeds/0002_neighborhoods_and_facilities.sql` (unchanged files, idempotent), only after all migrations succeeded. Re-running re-applies the seed-managed names/labels of the seeded places and facilities; rows you add yourself are untouched.
+6. **Verify** — the run fails unless everything below is true.
+
+It refuses to continue (and changes nothing) when the database **already has tables but no migration record** (for example the SQL was pasted by hand), or when the recorded migrations are unknown/out of order.
+
+### One-time setup: GitHub secrets (works in a phone browser)
+1. **Cloudflare API token:** dash.cloudflare.com → profile icon → *My Profile* → *API Tokens* → *Create Token* → *Create Custom Token*. Permission: **Account → D1 → Edit**, scope: your account only. Create it and copy the token (shown once). If preflight later reports a permission error, edit the token and also add **Account → Account Settings → Read**.
+2. **Account ID:** Cloudflare dashboard → *Workers & Pages* (overview page) → *Account ID* on the right (or the long id in the dashboard URL).
+3. **GitHub:** repository → *Settings* → *Secrets and variables* → *Actions* → *New repository secret*. Create **`CLOUDFLARE_API_TOKEN`** and **`CLOUDFLARE_ACCOUNT_ID`** with exactly these names. Never paste them anywhere else (not in code, issues or chat).
+
+### How to run
+1. Make sure `package-lock.json` is in the repository (it is, from the lockfile helper) and the files of this update are on `main`.
+2. *Actions* → **THAKBO Initialize Production D1** → *Run workflow* → branch `main`, **mode = `check`** → *Run*. This is read-only: it shows the state and what would be applied.
+3. If the check is green and says `Database state : fresh` (or `tracked`), run it again with **mode = `apply`** and type **`THAKBO-DB`** in the confirmation box.
+4. Green check = done. Open `https://thakbo.kawsar98dd.workers.dev/api/health` to confirm the app reaches the database.
+
+### Expected verification results (fresh database, after `apply`)
+| Check | Expected |
+|---|---|
+| Migrations recorded | `8/8` in the order 0000 … 0007 |
+| Required tables | `21/21` (Better Auth: user, session, account, verification, rateLimit; THAKBO tables; `d1_migrations`) |
+| countries / divisions / districts / cities | `1/1/1/1` (Bangladesh, Rajshahi division, Rajshahi district, Rajshahi city with Bangla name) |
+| Rajshahi active areas | `10` (Hetem Khan, Ghoshpara, Shaheb Bazar, Talaimari, Kazla, Motihar, Binodpur, Upashahar, Laxmipur, Sopura) |
+| Rajshahi aliases | `25`; the spellings Hatem Khan / হেতেম খান / হেটেম খান / হাতেম খান / Saheb Bazar / সাহেববাজার resolve to the right area |
+| Facilities | `22`, each with a Bangla label |
+| Foreign-key violations | `0` |
+| Informational | users and listings are only counted, never changed |
+
+Later growth is allowed: the checks require *at least* these values (never fewer), so the workflow can be re-run after you add cities, areas or facilities.
+
+### If a run fails
+* **Red at Preflight with "NO migration tracking":** tables exist but wrangler has no record (the SQL was run by hand). Nothing was changed. Do not delete anything; send the log of the `check` run to the developer assistant, who will prepare a safe reconciliation.
+* **Red at "Apply pending migrations" with "PARTIALLY applied":** the migrations before the failing one are recorded and safe; the failing one was rolled back by D1; seeding and verification did not run. Read the error in the log, fix the cause (the developer assistant can do this from the log), then run the workflow again with `apply` — it continues with the remaining migrations.
+* **Red at Seed:** migrations are complete. Fix the cause and re-run `apply` (seeds are idempotent).
+* **Red at Verify:** read the `PROBLEM:` lines; do not ignore them.
+
+### Verification status of this workflow
+* ✅ The tooling logic (`scripts/production_db.py`) passes 33 tests (`scripts/production_db_test.py`) using a **fake wrangler** over a real SQLite file and the project's real migrations/seeds: fresh init, re-run, existing user data, untracked schema, unknown migrations, partial failure + rerun, failing seed, verification failures, secret hygiene, manual-only trigger.
+* ⏳ **Never run against real Cloudflare.** Not yet verified with the real wrangler: the exact `d1 list --json` field names, `migrations apply` behavior without a terminal, the temporary config's `migrations_table`, `PRAGMA foreign_key_check` and `execute --file` on remote D1. The first real run (start with `check`) will show this; a failure there stops safely before any change.
+
 ## Technology
 
 | Purpose | Choice |

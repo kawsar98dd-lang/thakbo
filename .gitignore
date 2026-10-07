@@ -31,3 +31,6 @@ Thumbs.db
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# temporary wrangler config written by the production D1 workflow (never commit)
+.production-d1.wrangler.json

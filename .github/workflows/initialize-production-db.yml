@@ -1,0 +1,123 @@
+name: THAKBO Initialize Production D1
+
+# MANUAL ONLY. This workflow changes the PRODUCTION database "thakbo-db" and is deliberately separate from
+# THAKBO CI. It never runs automatically: there is no push, pull_request or schedule trigger.
+#
+# Safe to run again: migrations are tracked by wrangler (already-applied ones are skipped) and the seed files are
+# idempotent. It never creates, drops, resets or recreates a database and never deploys the Worker.
+#
+# How to run (phone friendly): Actions → "THAKBO Initialize Production D1" → Run workflow
+#   1st run: mode = check   (read-only: shows what would happen)
+#   2nd run: mode = apply   and type  THAKBO-DB  in the confirmation box
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "check = read-only report, apply = run migrations + seeds + verification"
+        type: choice
+        options:
+          - check
+          - apply
+        default: check
+      confirm:
+        description: "Only for mode=apply: type THAKBO-DB to confirm"
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+# Never two production runs at the same time, and never cancel one that is half-way through.
+concurrency:
+  group: thakbo-production-d1
+  cancel-in-progress: false
+
+jobs:
+  production-d1:
+    name: Production D1 (${{ inputs.mode }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Safety checks (branch, confirmation, secrets present)
+        env:
+          MODE: ${{ inputs.mode }}
+          CONFIRM: ${{ inputs.confirm }}
+          REF: ${{ github.ref }}
+          HAS_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+          HAS_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
+        run: |
+          set -euo pipefail
+          if [ "$REF" != "refs/heads/main" ]; then
+            echo "::error::Run this workflow only on the main branch (current: $REF)."; exit 1
+          fi
+          if [ "$MODE" = "apply" ] && [ "$CONFIRM" != "THAKBO-DB" ]; then
+            echo "::error::mode=apply needs the confirmation text THAKBO-DB. Nothing was changed."; exit 1
+          fi
+          if [ "$HAS_TOKEN" != "true" ] || [ "$HAS_ACCOUNT" != "true" ]; then
+            echo "::error::GitHub secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID must both be set (see README → Production database)."; exit 1
+          fi
+          echo "Mode: $MODE"
+
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Require the lockfile
+        run: |
+          test -f package-lock.json || { echo "::error::package-lock.json is missing; run THAKBO Generate lockfile first."; exit 1; }
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # Same npm as THAKBO CI, so the lockfile resolves identically.
+      - name: Install npm 11 (exact version)
+        run: npm install -g npm@11.19.1
+
+      # Installs the wrangler version pinned in package-lock.json (no secrets are present in this step).
+      - name: Install dependencies (npm ci)
+        run: npm ci --no-audit --no-fund
+
+      # Offline: proves the tool's own logic on the real migrations/seeds before it touches production.
+      - name: Self-test the production tooling (fake wrangler, no network)
+        run: python3 scripts/production_db_test.py
+
+      - name: 1. Preflight (repository + existing database + migration state)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: python3 scripts/production_db.py preflight
+
+      - name: Check mode - report only (read-only)
+        if: ${{ inputs.mode == 'check' }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: python3 scripts/production_db.py verify --soft
+
+      - name: 2. Apply pending migrations (wrangler d1 migrations apply)
+        if: ${{ inputs.mode == 'apply' }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: python3 scripts/production_db.py migrate
+
+      - name: 3. Seed reference data (idempotent, only after all migrations succeeded)
+        if: ${{ inputs.mode == 'apply' }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: python3 scripts/production_db.py seed
+
+      - name: 4. Verify production state (fails the run if anything is unexpected)
+        if: ${{ inputs.mode == 'apply' }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: python3 scripts/production_db.py verify
+
+      - name: Remove temporary configuration
+        if: ${{ always() }}
+        run: python3 scripts/production_db.py cleanup
