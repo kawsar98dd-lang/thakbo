@@ -6,6 +6,9 @@ import sys
 
 con = sqlite3.connect(":memory:")
 con.execute("PRAGMA foreign_keys=ON")
+# Production D1 rejects long compound SELECT chains that normal SQLite accepts. Emulate a strict limit so a
+# local pass means something (the old seed failed in production with "too many terms in compound SELECT").
+con.setlimit(sqlite3.SQLITE_LIMIT_COMPOUND_SELECT, 5)
 for path in sorted(glob.glob("db/migrations/*.sql")):
     con.executescript(open(path, encoding="utf-8").read())
     print("applied", path)

@@ -172,6 +172,9 @@ It refuses to continue (and changes nothing) when the database **already has tab
 
 Later growth is allowed: the checks require *at least* these values (never fewer), so the workflow can be re-run after you add cities, areas or facilities.
 
+### D1 seed compatibility rule
+Seed (and migration) SQL must **not** use `UNION` / `UNION ALL` / `EXCEPT` / `INTERSECT` chains, and a `VALUES` list may have **at most 5 rows**. Production Cloudflare D1 rejects long compound SELECTs ("too many terms in compound SELECT") that a normal local SQLite accepts, so a seed can pass locally and still fail in production — this is exactly what stopped the first production run (seed 0001 used an 8-term `UNION ALL`). Write several small `INSERT OR IGNORE INTO … VALUES (…), (…)` statements instead. This is enforced three ways: statically in `scripts/production_db.py` (the production workflow refuses such SQL before touching the database), in `tests/seed-compatibility.test.ts`, and in `scripts/production_db_test.py` / `scripts/verify-sql.py`, which also emulate D1's strict limit on local SQLite. (The exact D1 limit is not documented in the sources used here, so the rule is deliberately stricter than needed.)
+
 ### If a run fails
 * **Red at Preflight with "NO migration tracking":** tables exist but wrangler has no record (the SQL was run by hand). Nothing was changed. Do not delete anything; send the log of the `check` run to the developer assistant, who will prepare a safe reconciliation.
 * **Red at "Apply pending migrations" with "PARTIALLY applied":** the migrations before the failing one are recorded and safe; the failing one was rolled back by D1; seeding and verification did not run. Read the error in the log, fix the cause (the developer assistant can do this from the log), then run the workflow again with `apply` — it continues with the remaining migrations.
@@ -179,7 +182,7 @@ Later growth is allowed: the checks require *at least* these values (never fewer
 * **Red at Verify:** read the `PROBLEM:` lines; do not ignore them.
 
 ### Verification status of this workflow
-* ✅ The tooling logic (`scripts/production_db.py`) passes 33 tests (`scripts/production_db_test.py`) using a **fake wrangler** over a real SQLite file and the project's real migrations/seeds: fresh init, re-run, existing user data, untracked schema, unknown migrations, partial failure + rerun, failing seed, verification failures, secret hygiene, manual-only trigger.
+* ✅ The tooling logic (`scripts/production_db.py`) passes 47 tests (`scripts/production_db_test.py`) using a **fake wrangler** over a real SQLite file and the project's real migrations/seeds: fresh init, re-run, existing user data, untracked schema, unknown migrations, partial failure + rerun, failing seed, verification failures, secret hygiene, manual-only trigger.
 * ⏳ **Never run against real Cloudflare.** Not yet verified with the real wrangler: the exact `d1 list --json` field names, `migrations apply` behavior without a terminal, the temporary config's `migrations_table`, `PRAGMA foreign_key_check` and `execute --file` on remote D1. The first real run (start with `check`) will show this; a failure there stops safely before any change.
 
 ## Technology

@@ -14,6 +14,9 @@ Safety rules enforced here (each one has a test in scripts/production_db_test.py
   * Refuses to continue when the schema already exists WITHOUT migration tracking, when the tracking table contains
     unknown or out-of-order migrations, when the database name is missing or ambiguous, or when migration/seed files
     contain destructive SQL (the single allowed DROP is the audience-table rebuild in migration 0007).
+  * Refuses SQL that production D1 cannot run: any UNION / EXCEPT / INTERSECT, and any VALUES list with more than 5 rows
+    (production D1 rejects long compound SELECT chains — "too many terms in compound SELECT" — that a normal local
+    SQLite accepts, so passing locally proves nothing; see compound_select_problems()).
   * Never prints environment variables. Secrets reach wrangler only through the process environment.
 """
 
@@ -158,6 +161,45 @@ def strip_sql_comments(sql: str) -> str:
     return re.sub(r"--[^\n]*", "", sql)
 
 
+# Production D1 allows far fewer terms in a compound SELECT than a normal SQLite build (500). The exact D1 limit is not
+# documented in the sources used here, so the rule is deliberately strict: NO compound operators at all, and at most
+# MAX_VALUES_ROWS rows per VALUES list (SQLite exempts VALUES from the compound limit, but the cap keeps even a stricter
+# engine happy). Use several small INSERT ... VALUES statements instead.
+MAX_VALUES_ROWS = 5
+
+_SQL_NOISE = re.compile(r"--[^\n]*|/\*.*?\*/|'(?:[^']|'')*'", re.S)
+
+
+def mask_sql(sql: str) -> str:
+    """Removes comments and replaces string literals with '' so keywords inside text are never mistaken for SQL."""
+    return _SQL_NOISE.sub(lambda m: "''" if m.group(0).startswith("'") else " ", sql)
+
+
+def count_values_rows(masked: str, start: int) -> int:
+    """Number of top-level (...) tuples after a VALUES keyword, up to the end of the statement."""
+    depth = rows = 0
+    for char in masked[start:]:
+        if char == "(":
+            if depth == 0:
+                rows += 1
+            depth += 1
+        elif char == ")":
+            depth -= 1
+        elif char == ";" and depth == 0:
+            break
+    return rows
+
+
+def compound_select_problems(sql: str) -> list[str]:
+    masked = mask_sql(sql)
+    problems = [f"{word.upper()} (compound SELECT)" for word in sorted({m.group(1).upper() for m in re.finditer(r"\b(UNION|EXCEPT|INTERSECT)\b", masked, re.I)})]
+    for match in re.finditer(r"\bVALUES\b", masked, re.I):
+        rows = count_values_rows(masked, match.end())
+        if rows > MAX_VALUES_ROWS:
+            problems.append(f"VALUES list with {rows} rows (maximum {MAX_VALUES_ROWS})")
+    return problems
+
+
 def migration_files() -> list[str]:
     folder = repo_root() / MIGRATIONS_DIR
     return sorted(path.name for path in folder.glob("*.sql"))
@@ -175,6 +217,8 @@ def check_repository() -> list[str]:
         sql = strip_sql_comments((repo_root() / MIGRATIONS_DIR / name).read_text(encoding="utf-8"))
         if re.search(r"\bTRUNCATE\b", sql, re.I) or re.search(r"\bDELETE\s+FROM\b", sql, re.I):
             raise ToolError(f"{name}: destructive statement (DELETE/TRUNCATE) is not allowed in a production migration.")
+        for problem in compound_select_problems(sql):
+            raise ToolError(f"{name}: {problem} is not D1-compatible. Use several small INSERT ... VALUES statements.")
         for kind, table in re.findall(r"\bDROP\s+(TABLE|INDEX|VIEW|TRIGGER)\s+(?:IF\s+EXISTS\s+)?[\"`]?(\w+)", sql, re.I):
             if (name, table) not in ALLOWED_DROPS or kind.upper() != "TABLE":
                 raise ToolError(f"{name}: DROP {kind} {table} is not allowed in a production migration.")
@@ -185,6 +229,11 @@ def check_repository() -> list[str]:
         sql = strip_sql_comments(path.read_text(encoding="utf-8"))
         if re.search(r"\b(DROP|DELETE|TRUNCATE|ALTER)\b", sql, re.I):
             raise ToolError(f"{seed}: seed files must not contain DROP/DELETE/TRUNCATE/ALTER.")
+        for problem in compound_select_problems(sql):
+            raise ToolError(f"{seed}: {problem} is not D1-compatible (production D1 rejects long compound SELECTs). Use several small INSERT ... VALUES statements.")
+    unlisted = sorted(p.name for p in (repo_root() / "db/seeds").glob("*.sql") if f"db/seeds/{p.name}" not in SEED_FILES)
+    if unlisted:
+        raise ToolError(f"Seed files not listed in SEED_FILES (would be silently skipped): {unlisted}")
     return files
 
 

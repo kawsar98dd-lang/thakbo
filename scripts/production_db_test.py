@@ -56,6 +56,9 @@ assert cfg["database_id"] and cfg["database_name"] == "thakbo-db" and cfg["migra
 con = sqlite3.connect(os.environ["FAKE_D1_DB"])
 con.row_factory = sqlite3.Row
 con.execute("PRAGMA foreign_keys = ON")
+# Emulate production D1, which rejects long compound SELECT chains that a normal SQLite accepts.
+if os.environ.get("FAKE_D1_COMPOUND_LIMIT"):
+    con.setlimit(sqlite3.SQLITE_LIMIT_COMPOUND_SELECT, int(os.environ["FAKE_D1_COMPOUND_LIMIT"]))
 
 if args[1] == "execute":
     if "--command" in args:
@@ -103,6 +106,7 @@ class ToolTestCase(unittest.TestCase):
             "FAKE_D1_LOG": str(self.log),
             "CLOUDFLARE_API_TOKEN": SECRET,
             "CLOUDFLARE_ACCOUNT_ID": "acct-0000",
+            "FAKE_D1_COMPOUND_LIMIT": "5",
         }
         self.saved = {k: os.environ.get(k) for k in [*self.env, "FAKE_D1_LIST", "FAKE_D1_FAIL_AT", "GITHUB_STEP_SUMMARY"]}
         os.environ.update(self.env)
@@ -354,6 +358,130 @@ class Verification(ToolTestCase):
         con.executescript((self.root / "db/migrations/0000_better_auth.sql").read_text())
         con.close()
         self.assertEqual(self.run_tool("preflight"), 1)
+
+
+class SeedCompatibility(ToolTestCase):
+    """Guards against the production failure "too many terms in compound SELECT" (seed 0001 used an 8-term UNION ALL).
+
+    Local SQLite accepts 500 terms, so merely running the seeds locally proves nothing. These tests (1) scan the SQL
+    statically and (2) run everything under an emulated production limit.
+    """
+
+    def real_seed_sql(self) -> dict[str, str]:
+        return {p.name: p.read_text(encoding="utf-8") for p in sorted((REPO / "db/seeds").glob("*.sql"))}
+
+    def test_every_seed_and_migration_is_free_of_compound_selects_and_long_values_lists(self) -> None:
+        for folder in ("db/seeds", "db/migrations"):
+            for path in sorted((REPO / folder).glob("*.sql")):
+                self.assertEqual(tool.compound_select_problems(path.read_text(encoding="utf-8")), [], f"{folder}/{path.name}")
+
+    def test_no_compound_keyword_appears_anywhere_in_seed_files_not_even_in_comments(self) -> None:
+        for name, sql in self.real_seed_sql().items():
+            self.assertIsNone(re.search(r"\b(UNION|EXCEPT|INTERSECT)\b", sql, re.I), name)
+
+    def test_checker_catches_the_exact_production_failure_pattern(self) -> None:
+        eight_terms = "INSERT OR IGNORE INTO areas (city_id, name, slug) SELECT 1, a.name, a.slug FROM (" + " UNION ALL ".join(
+            f"SELECT 'n{i}' AS name, 's{i}' AS slug" for i in range(8)) + ") a;"
+        self.assertTrue(tool.compound_select_problems(eight_terms))
+        self.assertTrue(tool.compound_select_problems("SELECT 1 EXCEPT SELECT 2;"))
+        self.assertTrue(tool.compound_select_problems("SELECT 1 INTERSECT SELECT 1;"))
+        six_rows = "INSERT INTO t (a) VALUES " + ",".join(f"({i})" for i in range(6)) + ";"
+        self.assertTrue(tool.compound_select_problems(six_rows))
+        self.assertEqual(tool.compound_select_problems("INSERT INTO t (a) VALUES " + ",".join(f"({i})" for i in range(5)) + ";"), [])
+
+    def test_checker_ignores_keywords_inside_comments_and_text(self) -> None:
+        sql = "-- UNION ALL in a comment\n/* EXCEPT */ INSERT INTO t (a) VALUES ('UNION ALL; (x), (y)');"
+        self.assertEqual(tool.compound_select_problems(sql), [])
+
+    def test_emulated_production_limit_rejects_the_old_style_query_and_accepts_the_new_seeds(self) -> None:
+        con = sqlite3.connect(":memory:")
+        con.setlimit(sqlite3.SQLITE_LIMIT_COMPOUND_SELECT, 5)
+        eight = " UNION ALL ".join(f"SELECT {i}" for i in range(8))
+        with self.assertRaises(sqlite3.Error) as caught:
+            con.execute(eight).fetchall()
+        self.assertIn("too many terms in compound SELECT", str(caught.exception))
+        # the real files, under the same limit, via the same fake-wrangler path production uses
+        self.assertEqual(self.full_run(), [0, 0, 0, 0])
+
+    def test_preflight_refuses_a_seed_with_a_compound_select_before_touching_the_database(self) -> None:
+        seed = self.root / "db/seeds/0001_reference_data.sql"
+        seed.write_text(seed.read_text() + "\nINSERT OR IGNORE INTO areas (city_id, name, slug) SELECT 1, 'a', 'a' UNION ALL SELECT 1, 'b', 'b';\n")
+        self.assertEqual(self.run_tool("preflight"), 1)
+        self.assertIn("not D1-compatible", self.output)
+        self.assertEqual(self.calls(), [])
+
+    def test_preflight_refuses_a_values_list_longer_than_five_rows(self) -> None:
+        seed = self.root / "db/seeds/0002_neighborhoods_and_facilities.sql"
+        seed.write_text(seed.read_text() + "\nINSERT OR IGNORE INTO facilities (name, slug) VALUES " + ",".join(f"('f{i}','f{i}')" for i in range(6)) + ";\n")
+        self.assertEqual(self.run_tool("preflight"), 1)
+        self.assertIn("VALUES list with 6 rows", self.output)
+
+    def test_every_sql_statement_the_tool_sends_is_d1_compatible(self) -> None:
+        self.assertEqual(self.full_run(), [0, 0, 0, 0])
+        sent = [call[call.index("--command") + 1] for call in self.calls() if "--command" in call]
+        self.assertGreater(len(sent), 5)
+        for statement in sent:
+            self.assertEqual(tool.compound_select_problems(statement), [], statement)
+
+    def test_seed_list_matches_the_files_on_disk_and_is_ordered(self) -> None:
+        on_disk = sorted(f"db/seeds/{p.name}" for p in (REPO / "db/seeds").glob("*.sql"))
+        self.assertEqual(on_disk, tool.SEED_FILES)
+        self.assertEqual(tool.SEED_FILES, ["db/seeds/0001_reference_data.sql", "db/seeds/0002_neighborhoods_and_facilities.sql"])
+
+    def test_seed_unlisted_on_disk_is_refused(self) -> None:
+        (self.root / "db/seeds/0003_extra.sql").write_text("INSERT OR IGNORE INTO countries (name, slug, code) VALUES ('X', 'x', 'XX');\n")
+        self.assertEqual(self.run_tool("preflight"), 1)
+        self.assertIn("not listed in SEED_FILES", self.output)
+
+    def test_running_the_seeds_repeatedly_creates_no_duplicates_and_exact_counts(self) -> None:
+        for _ in range(3):
+            self.assertEqual(self.full_run(), [0, 0, 0, 0])
+        counts = self.sql("SELECT (SELECT count(*) FROM countries), (SELECT count(*) FROM divisions), (SELECT count(*) FROM districts), "
+                          "(SELECT count(*) FROM cities), (SELECT count(*) FROM areas), (SELECT count(*) FROM area_aliases), (SELECT count(*) FROM facilities)")[0]
+        self.assertEqual(counts, (1, 1, 1, 1, 10, 25, 22))
+        for table, key in (("areas", "city_id, slug"), ("facilities", "slug"), ("area_aliases", "city_id, normalized_alias"), ("cities", "slug")):
+            self.assertEqual(self.sql(f"SELECT {key}, count(*) FROM {table} GROUP BY {key} HAVING count(*) > 1"), [])
+
+    def test_rerun_repairs_a_database_that_was_partly_seeded_by_the_failed_production_run(self) -> None:
+        # State after the failed production run: all 8 migrations applied; only the first statements of seed 0001 ran.
+        self.assertEqual(self.run_tool("preflight"), 0)
+        self.assertEqual(self.run_tool("migrate"), 0)
+        con = sqlite3.connect(self.db)
+        con.execute("PRAGMA foreign_keys = ON")
+        con.executescript(
+            "INSERT INTO countries (name, slug, code) VALUES ('Bangladesh', 'bangladesh', 'BD');"
+            "INSERT INTO divisions (country_id, name, slug) SELECT id, 'Rajshahi', 'rajshahi' FROM countries;"
+            "INSERT INTO districts (division_id, name, slug) SELECT id, 'Rajshahi', 'rajshahi' FROM divisions;"
+            "INSERT INTO cities (district_id, name, slug, latitude, longitude) SELECT id, 'Rajshahi', 'rajshahi', 24.3745, 88.6042 FROM districts;"
+            "INSERT INTO areas (city_id, name, slug) SELECT id, 'Talaimari', 'talaimari' FROM cities;")
+        con.close()
+        self.output = ""
+        self.assertEqual(self.full_run(), [0, 0, 0, 0])
+        self.assertIn("Database state : tracked", self.output)
+        self.assertEqual(self.sql("SELECT count(*) FROM countries")[0][0], 1)
+        self.assertEqual(self.sql("SELECT count(*) FROM areas WHERE slug = 'talaimari'")[0][0], 1)
+        self.assertEqual(self.sql("SELECT count(*) FROM areas")[0][0], 10)
+        self.assertEqual(self.sql("SELECT count(*) FROM area_aliases")[0][0], 25)
+
+    def test_rerun_repairs_a_database_where_seed_0001_finished_but_0002_did_not(self) -> None:
+        self.assertEqual(self.run_tool("preflight"), 0)
+        self.assertEqual(self.run_tool("migrate"), 0)
+        con = sqlite3.connect(self.db)
+        con.executescript((self.root / "db/seeds/0001_reference_data.sql").read_text())
+        con.close()
+        self.output = ""
+        self.assertEqual(self.full_run(), [0, 0, 0, 0])
+        self.assertEqual(self.sql("SELECT count(*) FROM areas")[0][0], 10)
+        self.assertEqual(self.sql("SELECT count(*) FROM facilities")[0][0], 22)
+
+    def test_user_data_and_manual_additions_survive_a_reseed(self) -> None:
+        self.assertEqual(self.full_run(), [0, 0, 0, 0])
+        con = sqlite3.connect(self.db)
+        con.execute("INSERT INTO areas (city_id, name, slug) SELECT id, 'Manual Place', 'manual-place' FROM cities WHERE slug = 'rajshahi'")
+        con.commit()
+        con.close()
+        self.assertEqual(self.full_run(), [0, 0, 0, 0])
+        self.assertEqual(self.sql("SELECT count(*) FROM areas WHERE slug = 'manual-place'")[0][0], 1)
 
 
 class SecretsAndCleanup(ToolTestCase):

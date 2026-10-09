@@ -2,7 +2,9 @@
 -- GENERATED from a reviewed list; the `normalized_alias` values are produced by normalizeLocationText()
 -- (app/lib/location.ts). tests/location-repository.test.ts re-computes every value and fails on any mismatch.
 --
--- * Idempotent: INSERT OR IGNORE + UPDATE keyed by slug. Safe to run any number of times.
+-- * Idempotent: INSERT OR IGNORE + UPDATE keyed by slug. Safe to run any number of times, also on a partly seeded database.
+-- * D1-compatible: no compound SELECT chains and at most 5 rows per VALUES list (production D1 limits compound SELECTs
+--   far below normal SQLite). scripts/production_db.py and the tests enforce this.
 -- * Contains NO listings and NO users.
 -- * This is only a BOOTSTRAP list (representative well-known places). Rajshahi has many more neighborhoods; add them
 --   with the location service (app/server/db/repositories/locations.ts) or by extending this list.
@@ -53,61 +55,40 @@ UPDATE areas SET name_en = 'Laxmipur', name_bn = 'লক্ষ্মীপুর
 UPDATE areas SET name_en = 'Sopura', name_bn = 'সপুরা', area_type = 'neighborhood', search_priority = 50
   WHERE slug = 'sopura' AND city_id = (SELECT id FROM cities WHERE slug = 'rajshahi');
 
-INSERT OR IGNORE INTO area_aliases (area_id, city_id, alias, normalized_alias, language)
-  SELECT a.id, a.city_id, x.alias, x.norm, x.lang
-  FROM areas a
-  JOIN cities c ON c.id = a.city_id AND c.slug = 'rajshahi'
-  JOIN (
-    SELECT 'hetem-khan' AS area_slug, 'Hetem Khan' AS alias, 'hetemkhan' AS norm, 'en' AS lang
-    UNION ALL
-    SELECT 'hetem-khan' AS area_slug, 'হেতেম খান' AS alias, 'হেতেমখান' AS norm, 'bn' AS lang
-    UNION ALL
-    SELECT 'hetem-khan' AS area_slug, 'Hatem Khan' AS alias, 'hatemkhan' AS norm, 'en' AS lang
-    UNION ALL
-    SELECT 'hetem-khan' AS area_slug, 'হেটেম খান' AS alias, 'হেটেমখান' AS norm, 'bn' AS lang
-    UNION ALL
-    SELECT 'hetem-khan' AS area_slug, 'হাতেম খান' AS alias, 'হাতেমখান' AS norm, 'bn' AS lang
-    UNION ALL
-    SELECT 'ghoshpara' AS area_slug, 'Ghoshpara' AS alias, 'ghoshpara' AS norm, 'en' AS lang
-    UNION ALL
-    SELECT 'ghoshpara' AS area_slug, 'ঘোষপাড়া' AS alias, 'ঘোষপাড়া' AS norm, 'bn' AS lang
-    UNION ALL
-    SELECT 'shaheb-bazar' AS area_slug, 'Shaheb Bazar' AS alias, 'shahebazar' AS norm, 'en' AS lang
-    UNION ALL
-    SELECT 'shaheb-bazar' AS area_slug, 'সাহেব বাজার' AS alias, 'সাহেববাজার' AS norm, 'bn' AS lang
-    UNION ALL
-    SELECT 'shaheb-bazar' AS area_slug, 'Saheb Bazar' AS alias, 'sahebazar' AS norm, 'en' AS lang
-    UNION ALL
-    SELECT 'talaimari' AS area_slug, 'Talaimari' AS alias, 'talaimari' AS norm, 'en' AS lang
-    UNION ALL
-    SELECT 'talaimari' AS area_slug, 'তালাইমারী' AS alias, 'তালাইমারী' AS norm, 'bn' AS lang
-    UNION ALL
-    SELECT 'talaimari' AS area_slug, 'তালাইমারি' AS alias, 'তালাইমারি' AS norm, 'bn' AS lang
-    UNION ALL
-    SELECT 'kazla' AS area_slug, 'Kazla' AS alias, 'kazla' AS norm, 'en' AS lang
-    UNION ALL
-    SELECT 'kazla' AS area_slug, 'কাজলা' AS alias, 'কাজলা' AS norm, 'bn' AS lang
-    UNION ALL
-    SELECT 'motihar' AS area_slug, 'Motihar' AS alias, 'motihar' AS norm, 'en' AS lang
-    UNION ALL
-    SELECT 'motihar' AS area_slug, 'মতিহার' AS alias, 'মতিহার' AS norm, 'bn' AS lang
-    UNION ALL
-    SELECT 'binodpur' AS area_slug, 'Binodpur' AS alias, 'binodpur' AS norm, 'en' AS lang
-    UNION ALL
-    SELECT 'binodpur' AS area_slug, 'বিনোদপুর' AS alias, 'বিনোদপুর' AS norm, 'bn' AS lang
-    UNION ALL
-    SELECT 'upashahar' AS area_slug, 'Upashahar' AS alias, 'upashahar' AS norm, 'en' AS lang
-    UNION ALL
-    SELECT 'upashahar' AS area_slug, 'উপশহর' AS alias, 'উপশহর' AS norm, 'bn' AS lang
-    UNION ALL
-    SELECT 'laxmipur' AS area_slug, 'Laxmipur' AS alias, 'laxmipur' AS norm, 'en' AS lang
-    UNION ALL
-    SELECT 'laxmipur' AS area_slug, 'লক্ষ্মীপুর' AS alias, 'লক্ষ্মীপুর' AS norm, 'bn' AS lang
-    UNION ALL
-    SELECT 'sopura' AS area_slug, 'Sopura' AS alias, 'sopura' AS norm, 'en' AS lang
-    UNION ALL
-    SELECT 'sopura' AS area_slug, 'সপুরা' AS alias, 'সপুরা' AS norm, 'bn' AS lang
-  ) x ON x.area_slug = a.slug;
+INSERT OR IGNORE INTO area_aliases (area_id, city_id, alias, normalized_alias, language) VALUES
+  ((SELECT a.id FROM areas a JOIN cities c ON c.id = a.city_id WHERE c.slug = 'rajshahi' AND a.slug = 'hetem-khan'), (SELECT id FROM cities WHERE slug = 'rajshahi'), 'Hetem Khan', 'hetemkhan', 'en'),
+  ((SELECT a.id FROM areas a JOIN cities c ON c.id = a.city_id WHERE c.slug = 'rajshahi' AND a.slug = 'hetem-khan'), (SELECT id FROM cities WHERE slug = 'rajshahi'), 'হেতেম খান', 'হেতেমখান', 'bn'),
+  ((SELECT a.id FROM areas a JOIN cities c ON c.id = a.city_id WHERE c.slug = 'rajshahi' AND a.slug = 'hetem-khan'), (SELECT id FROM cities WHERE slug = 'rajshahi'), 'Hatem Khan', 'hatemkhan', 'en'),
+  ((SELECT a.id FROM areas a JOIN cities c ON c.id = a.city_id WHERE c.slug = 'rajshahi' AND a.slug = 'hetem-khan'), (SELECT id FROM cities WHERE slug = 'rajshahi'), 'হেটেম খান', 'হেটেমখান', 'bn'),
+  ((SELECT a.id FROM areas a JOIN cities c ON c.id = a.city_id WHERE c.slug = 'rajshahi' AND a.slug = 'hetem-khan'), (SELECT id FROM cities WHERE slug = 'rajshahi'), 'হাতেম খান', 'হাতেমখান', 'bn');
+
+INSERT OR IGNORE INTO area_aliases (area_id, city_id, alias, normalized_alias, language) VALUES
+  ((SELECT a.id FROM areas a JOIN cities c ON c.id = a.city_id WHERE c.slug = 'rajshahi' AND a.slug = 'ghoshpara'), (SELECT id FROM cities WHERE slug = 'rajshahi'), 'Ghoshpara', 'ghoshpara', 'en'),
+  ((SELECT a.id FROM areas a JOIN cities c ON c.id = a.city_id WHERE c.slug = 'rajshahi' AND a.slug = 'ghoshpara'), (SELECT id FROM cities WHERE slug = 'rajshahi'), 'ঘোষপাড়া', 'ঘোষপাড়া', 'bn'),
+  ((SELECT a.id FROM areas a JOIN cities c ON c.id = a.city_id WHERE c.slug = 'rajshahi' AND a.slug = 'shaheb-bazar'), (SELECT id FROM cities WHERE slug = 'rajshahi'), 'Shaheb Bazar', 'shahebazar', 'en'),
+  ((SELECT a.id FROM areas a JOIN cities c ON c.id = a.city_id WHERE c.slug = 'rajshahi' AND a.slug = 'shaheb-bazar'), (SELECT id FROM cities WHERE slug = 'rajshahi'), 'সাহেব বাজার', 'সাহেববাজার', 'bn'),
+  ((SELECT a.id FROM areas a JOIN cities c ON c.id = a.city_id WHERE c.slug = 'rajshahi' AND a.slug = 'shaheb-bazar'), (SELECT id FROM cities WHERE slug = 'rajshahi'), 'Saheb Bazar', 'sahebazar', 'en');
+
+INSERT OR IGNORE INTO area_aliases (area_id, city_id, alias, normalized_alias, language) VALUES
+  ((SELECT a.id FROM areas a JOIN cities c ON c.id = a.city_id WHERE c.slug = 'rajshahi' AND a.slug = 'talaimari'), (SELECT id FROM cities WHERE slug = 'rajshahi'), 'Talaimari', 'talaimari', 'en'),
+  ((SELECT a.id FROM areas a JOIN cities c ON c.id = a.city_id WHERE c.slug = 'rajshahi' AND a.slug = 'talaimari'), (SELECT id FROM cities WHERE slug = 'rajshahi'), 'তালাইমারী', 'তালাইমারী', 'bn'),
+  ((SELECT a.id FROM areas a JOIN cities c ON c.id = a.city_id WHERE c.slug = 'rajshahi' AND a.slug = 'talaimari'), (SELECT id FROM cities WHERE slug = 'rajshahi'), 'তালাইমারি', 'তালাইমারি', 'bn'),
+  ((SELECT a.id FROM areas a JOIN cities c ON c.id = a.city_id WHERE c.slug = 'rajshahi' AND a.slug = 'kazla'), (SELECT id FROM cities WHERE slug = 'rajshahi'), 'Kazla', 'kazla', 'en'),
+  ((SELECT a.id FROM areas a JOIN cities c ON c.id = a.city_id WHERE c.slug = 'rajshahi' AND a.slug = 'kazla'), (SELECT id FROM cities WHERE slug = 'rajshahi'), 'কাজলা', 'কাজলা', 'bn');
+
+INSERT OR IGNORE INTO area_aliases (area_id, city_id, alias, normalized_alias, language) VALUES
+  ((SELECT a.id FROM areas a JOIN cities c ON c.id = a.city_id WHERE c.slug = 'rajshahi' AND a.slug = 'motihar'), (SELECT id FROM cities WHERE slug = 'rajshahi'), 'Motihar', 'motihar', 'en'),
+  ((SELECT a.id FROM areas a JOIN cities c ON c.id = a.city_id WHERE c.slug = 'rajshahi' AND a.slug = 'motihar'), (SELECT id FROM cities WHERE slug = 'rajshahi'), 'মতিহার', 'মতিহার', 'bn'),
+  ((SELECT a.id FROM areas a JOIN cities c ON c.id = a.city_id WHERE c.slug = 'rajshahi' AND a.slug = 'binodpur'), (SELECT id FROM cities WHERE slug = 'rajshahi'), 'Binodpur', 'binodpur', 'en'),
+  ((SELECT a.id FROM areas a JOIN cities c ON c.id = a.city_id WHERE c.slug = 'rajshahi' AND a.slug = 'binodpur'), (SELECT id FROM cities WHERE slug = 'rajshahi'), 'বিনোদপুর', 'বিনোদপুর', 'bn'),
+  ((SELECT a.id FROM areas a JOIN cities c ON c.id = a.city_id WHERE c.slug = 'rajshahi' AND a.slug = 'upashahar'), (SELECT id FROM cities WHERE slug = 'rajshahi'), 'Upashahar', 'upashahar', 'en');
+
+INSERT OR IGNORE INTO area_aliases (area_id, city_id, alias, normalized_alias, language) VALUES
+  ((SELECT a.id FROM areas a JOIN cities c ON c.id = a.city_id WHERE c.slug = 'rajshahi' AND a.slug = 'upashahar'), (SELECT id FROM cities WHERE slug = 'rajshahi'), 'উপশহর', 'উপশহর', 'bn'),
+  ((SELECT a.id FROM areas a JOIN cities c ON c.id = a.city_id WHERE c.slug = 'rajshahi' AND a.slug = 'laxmipur'), (SELECT id FROM cities WHERE slug = 'rajshahi'), 'Laxmipur', 'laxmipur', 'en'),
+  ((SELECT a.id FROM areas a JOIN cities c ON c.id = a.city_id WHERE c.slug = 'rajshahi' AND a.slug = 'laxmipur'), (SELECT id FROM cities WHERE slug = 'rajshahi'), 'লক্ষ্মীপুর', 'লক্ষ্মীপুর', 'bn'),
+  ((SELECT a.id FROM areas a JOIN cities c ON c.id = a.city_id WHERE c.slug = 'rajshahi' AND a.slug = 'sopura'), (SELECT id FROM cities WHERE slug = 'rajshahi'), 'Sopura', 'sopura', 'en'),
+  ((SELECT a.id FROM areas a JOIN cities c ON c.id = a.city_id WHERE c.slug = 'rajshahi' AND a.slug = 'sopura'), (SELECT id FROM cities WHERE slug = 'rajshahi'), 'সপুরা', 'সপুরা', 'bn');
 
 -- Facilities: new catalogue entries (INSERT OR IGNORE), then bilingual labels and categories for all.
 INSERT OR IGNORE INTO facilities (name, slug, icon, sort_order) VALUES ('Shared bathroom', 'shared-bathroom', 'bath', 31);
