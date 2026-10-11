@@ -156,7 +156,7 @@ class RepositoryRules(ToolTestCase):
         self.assertEqual(self.calls(), [])  # nothing was sent to wrangler
 
     def test_destructive_sql_is_refused_in_migrations_and_seeds(self) -> None:
-        bad_migration = self.root / "db/migrations/0008_bad.sql"
+        bad_migration = self.root / "db/migrations/0009_bad.sql"
         bad_migration.write_text("DROP TABLE listings;\n")
         self.assertEqual(self.run_tool("preflight"), 1)
         self.assertIn("not allowed", self.output)
@@ -167,7 +167,7 @@ class RepositoryRules(ToolTestCase):
         self.assertIn("seed files must not contain", self.output)
 
     def test_comments_do_not_trigger_the_destructive_check_but_the_real_0007_drop_is_allowed(self) -> None:
-        (self.root / "db/migrations/0008_note.sql").write_text("-- nothing is dropped here: DROP TABLE x; DELETE FROM y\nSELECT 1;\n")
+        (self.root / "db/migrations/0009_note.sql").write_text("-- nothing is dropped here: DROP TABLE x; DELETE FROM y\nSELECT 1;\n")
         self.assertEqual(self.run_tool("preflight"), 0)
 
     def test_wrangler_config_must_still_describe_the_expected_binding(self) -> None:
@@ -287,7 +287,7 @@ class RefusalsAndFailures(ToolTestCase):
         self.output = ""
         self.assertEqual(self.full_run(), [0, 0, 0, 0])
         self.assertIn("Database state : tracked", self.output)
-        self.assertEqual(len(self.sql("SELECT name FROM d1_migrations")), 8)
+        self.assertEqual(len(self.sql("SELECT name FROM d1_migrations")), 9)
 
     def test_a_failing_seed_stops_before_verification(self) -> None:
         self.run_tool("preflight")
@@ -443,7 +443,7 @@ class SeedCompatibility(ToolTestCase):
             self.assertEqual(self.sql(f"SELECT {key}, count(*) FROM {table} GROUP BY {key} HAVING count(*) > 1"), [])
 
     def test_rerun_repairs_a_database_that_was_partly_seeded_by_the_failed_production_run(self) -> None:
-        # State after the failed production run: all 8 migrations applied; only the first statements of seed 0001 ran.
+        # State after the failed production run: all migrations applied; only the first statements of seed 0001 ran.
         self.assertEqual(self.run_tool("preflight"), 0)
         self.assertEqual(self.run_tool("migrate"), 0)
         con = sqlite3.connect(self.db)

@@ -44,6 +44,7 @@ EXPECTED_MIGRATIONS = [
     "0005_favorites_and_reports.sql",
     "0006_neighborhood_locations.sql",
     "0007_facility_labels_and_audiences.sql",
+    "0008_listing_moderation.sql",
 ]
 SEED_FILES = [
     "db/seeds/0001_reference_data.sql",

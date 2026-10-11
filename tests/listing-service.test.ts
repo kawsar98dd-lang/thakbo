@@ -4,10 +4,10 @@ import {
   changeOwnedListingStatus,
   createListingDraft,
   deleteOwnedListing,
-  updateListingDraft,
+  updateListing,
   validateDraftReferences,
 } from "~/server/listing-service.server";
-import { draftInput, facilityId, makeComplete, sequentialIds } from "./helpers/listings";
+import { draftInput, facilityId, makeComplete, sequentialIds, walkToStatus } from "./helpers/listings";
 import { createTestDatabase, insertSecondCity, insertUser, seededAreaId, seededCityId, type TestDatabase } from "./helpers/sqlite-d1";
 
 function setup(): TestDatabase {
@@ -110,31 +110,31 @@ describe("updating drafts: authorization", () => {
   it("lets the owner update their draft", async () => {
     const db = setup();
     const id = await ownedDraft(db);
-    expect((await updateListingDraft(db.d1, "owner", id, draftInput({ title: "Updated title" }))).ok).toBe(true);
+    expect((await updateListing(db.d1, "owner", id, draftInput({ title: "Updated title" }))).ok).toBe(true);
     expect((await getOwnedListingDetail(db.d1, id, "owner"))?.title).toBe("Updated title");
   });
 
   it("answers 'not found' (not 'forbidden') to another user and changes nothing", async () => {
     const db = setup();
     const id = await ownedDraft(db);
-    expect(await updateListingDraft(db.d1, "other", id, draftInput({ title: "Hijacked title" }))).toMatchObject({ ok: false, kind: "not_found" });
+    expect(await updateListing(db.d1, "other", id, draftInput({ title: "Hijacked title" }))).toMatchObject({ ok: false, kind: "not_found" });
     expect((await getOwnedListingDetail(db.d1, id, "owner"))?.title).toBe("Original title");
   });
 
   it("answers 'not found' for unknown ids", async () => {
     const db = setup();
-    expect(await updateListingDraft(db.d1, "owner", "dddddddd-dddd-4ddd-8ddd-dddddddddddd", draftInput())).toMatchObject({ ok: false, kind: "not_found" });
+    expect(await updateListing(db.d1, "owner", "dddddddd-dddd-4ddd-8ddd-dddddddddddd", draftInput())).toMatchObject({ ok: false, kind: "not_found" });
   });
 
   it("refuses to edit a published listing and reports validation errors without writing", async () => {
     const db = setup();
     const id = await ownedDraft(db);
-    const invalid = await updateListingDraft(db.d1, "owner", id, draftInput({ cityId: 987654 }));
+    const invalid = await updateListing(db.d1, "owner", id, draftInput({ cityId: 987654 }));
     expect(invalid).toMatchObject({ ok: false, kind: "invalid" });
     expect((await getOwnedListingDetail(db.d1, id, "owner"))?.cityId).toBeNull();
     makeComplete(db, id);
-    db.raw.prepare("UPDATE listings SET status = 'paused' WHERE id = ?").run(id);
-    expect(await updateListingDraft(db.d1, "owner", id, draftInput({ title: "Edited later on" }))).toMatchObject({ ok: false, kind: "not_editable" });
+    walkToStatus(db, id, "pending");
+    expect(await updateListing(db.d1, "owner", id, draftInput({ title: "Edited later on" }))).toMatchObject({ ok: false, kind: "not_editable" });
   });
 });
 
@@ -154,12 +154,13 @@ describe("deleting and status transitions", () => {
     const db = setup();
     const created = await createListingDraft(db.d1, "owner", draftInput(), sequentialIds());
     if (!created.ok) throw new Error("setup failed");
-    // A draft cannot jump to published/pending on its own: submitting is a Milestone 3 workflow.
+    // A draft cannot jump to published/pending through the generic status function: submitting has its own checks.
     expect(await changeOwnedListingStatus(db.d1, "owner", created.listingId, "published")).toMatchObject({ ok: false, kind: "not_allowed" });
     expect(await changeOwnedListingStatus(db.d1, "owner", created.listingId, "pending")).toMatchObject({ ok: false, kind: "not_allowed" });
     makeComplete(db, created.listingId);
-    db.raw.prepare("UPDATE listings SET status = 'published' WHERE id = ?").run(created.listingId);
+    walkToStatus(db, created.listingId, "published");
     expect(await changeOwnedListingStatus(db.d1, "owner", created.listingId, "paused")).toMatchObject({ ok: true });
-    expect(await changeOwnedListingStatus(db.d1, "owner", created.listingId, "published")).toMatchObject({ ok: true });
+    // There is no owner path back to published: only a moderator can publish.
+    expect(await changeOwnedListingStatus(db.d1, "owner", created.listingId, "published")).toMatchObject({ ok: false, kind: "not_allowed" });
   });
 });

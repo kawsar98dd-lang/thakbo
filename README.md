@@ -113,7 +113,7 @@ Nothing in the code mentions Rajshahi. A new city or neighborhood is only **new 
 * `/dashboard/listings/new` creates a **private draft** with sections: basic information, type, audience, price, location (city → neighborhood search → optional sub-area, address, landmark), facilities, availability. Drafts may be incomplete. `/dashboard/listings` shows only your own non-deleted listings; `/dashboard/listings/:id/edit` edits only your own **drafts**; delete is a soft delete.
 * Facilities and audiences come from the database / shared constants, never from React components. A facility can be attached to a listing only once (primary key) and must exist and be active.
 * Drafts are never public: public pages and search only ever return `status = 'published'`.
-* Allowed owner status changes are listed in `OWNER_STATUS_TRANSITIONS` (`app/lib/constants.ts`). "Rented" is an availability status; "removed" is the existing `deleted` status. Submitting a draft for review is Milestone 3; moderation is Milestone 7.
+* Allowed owner status changes are listed in `OWNER_STATUS_TRANSITIONS` (`app/lib/constants.ts`). "Rented" is an availability status; "removed" is the existing `deleted` status. Submitting for review and moderation are described in the Milestone A section below.
 
 ### Tests (Milestone 2)
 `tests/helpers/sqlite-d1.ts` runs the **real migrations and seed** on an in-memory SQLite database (Node's built-in `node:sqlite`), so repository and service tests exercise the true schema, constraints and SQL. New test files: `location-normalization`, `location-repository`, `location-validation`, `facilities-repository`, `profile-repository`, `profile-validation`, `listing-validation`, `listing-repository`, `listing-service`, `database-schema`, `auth-guards`.
@@ -133,6 +133,37 @@ Nothing in the code mentions Rajshahi. A new city or neighborhood is only **new 
 * The neighborhood picker needs JavaScript (it loads results from `/api/areas`).
 * No image upload, map, radius search, favorites, contact flow or admin screens were added.
 
+## Milestone A — listing submission and admin moderation
+
+**Status: implemented and tested locally. NOT applied to production.** Migration `0008_listing_moderation.sql` exists in the repository but has **not** been run against the production D1 database; nothing was deployed, and no secret was changed.
+
+### What owners can do
+* Save and edit **drafts** without any minimum (no photo, location or contact needed).
+* Choose the exact place with **"Use my current location"** (browser geolocation) or by pasting a **Google Maps link** (read locally in the browser/Worker; the link is never fetched). Nobody types latitude/longitude and no coordinate is ever invented or copied from a city centre. The server checks that the point is a finite number inside Bangladesh and, when the city has a known centre, within 60 km of it.
+* Add up to **12 photos** (JPEG/PNG/WebP, 5 MB each; the real type is read from the file's bytes) while the listing is a draft or was rejected.
+* **Submit for review**. The server (not the browser) requires title, description, type, city, neighborhood, a valid location, a rent above zero, at least one photo, and at least one valid phone/WhatsApp number on the owner's profile. All problems are returned at once, field by field.
+* A **rejected** listing shows the moderator's reason, can be corrected in place and resubmitted.
+* **Editing a published or paused listing** takes it offline in the same database statement and sends it back to review. There is no owner path back to `published` (the old `paused → published` shortcut was removed).
+
+### Status rules (enforced in the service layer AND in the database)
+`draft → pending` (owner, needs a photo) · `pending → published | rejected` (moderator only) · `pending → draft` (owner withdraws) · `published → pending` (owner edits) · `published/paused/rejected → draft` (owner) · `published → paused` (owner) · `paused/rejected → pending` (owner resubmits) · any → `deleted` (owner, soft delete).
+Moderation compare-and-set: the update only succeeds while the listing is still `pending` and the reviewer is not its owner, so of two simultaneous decisions exactly one wins. Migration 0008 adds triggers that refuse illegal transitions, a decision by anyone who is not a *different*, registered `admin_users` member (administrators cannot approve their own listing), a listing entering review without a photo, and a rejection without a 10–500 character reason.
+
+### Moderation history
+`listing_moderation_events` receives one row for **every** status change, written by a database trigger, so no code path can change a status without leaving a record (actor, role, action, from/to status, reason, time). The admin review page shows it.
+
+### Admin screens
+`/admin/listings` (pending queue, oldest first; tabs for rejected/published/paused) and `/admin/listings/:id` (full details including the private address, map point and owner phone/WhatsApp, photos, history, approve and reject with a mandatory reason). Both re-check `admin_users` on the server in the loader and the action.
+
+### Privacy
+Anonymous pages and JSON no longer contain the internal listing id, exact address, latitude/longitude, owner data, contact numbers or storage keys (search cards and the public detail query were changed; a test scans the serialized output). Photos are served by `/images/:id` from the **private** R2 bucket: images of published listings are public (cached 5 min); everything else is visible only to the owner (and moderators for pending/paused/rejected listings), is `private, no-store`, and unauthorised requests get 404. Responses carry `nosniff`, a sandboxing CSP and `Content-Disposition: inline`.
+
+### Database change (additive only — nothing in 0000–0007 was touched)
+`0008_listing_moderation.sql`: four new nullable columns on `listings` (`submitted_at`, `reviewed_at`, `reviewed_by`, `rejection_reason`), the `listing_moderation_events` table with indexes and foreign keys, and three triggers. The existing coordinate `CHECK` constraint was **not** changed. `scripts/production_db.py` now lists 0008 in `EXPECTED_MIGRATIONS` (all of its safety checks still apply); running the production workflow would apply 0008, so run it only when you decide to.
+
+### Not included (later milestones)
+Public photo gallery and contact buttons, interactive map picker, radius search redesign, image re-ordering, notifications to owners.
+
 ## Production database initialization (manual GitHub workflow)
 
 The workflow **THAKBO Initialize Production D1** (`.github/workflows/initialize-production-db.yml`) creates the tables and reference data in the **existing** Cloudflare D1 database `thakbo-db` — no computer needed. It is **manual only** (no push/schedule trigger), completely separate from THAKBO CI, and it never creates, drops, resets or recreates a database and never deploys the Worker.
@@ -140,7 +171,7 @@ The workflow **THAKBO Initialize Production D1** (`.github/workflows/initialize-
 ### What it does, in order
 1. **Safety checks** — only on `main`; for `apply` you must type `THAKBO-DB`; both GitHub secrets must exist.
 2. **Self-test** of the tooling (offline, fake wrangler on real SQLite).
-3. **Preflight** — checks the 8 migration files are in the required order (0000 … 0007) and that no migration/seed contains destructive SQL (the only `DROP` allowed is the audience-table rebuild in 0007, which copies every row first); finds the **one existing** database named `thakbo-db` (by name, through the Cloudflare API) and reads its migration state. If the name is missing or ambiguous it stops. It does not edit `wrangler.jsonc`: the database id is written to a temporary config that is deleted at the end and never committed.
+3. **Preflight** — checks the 9 migration files are in the required order (0000 … 0008) and that no migration/seed contains destructive SQL (the only `DROP` allowed is the audience-table rebuild in 0007, which copies every row first); finds the **one existing** database named `thakbo-db` (by name, through the Cloudflare API) and reads its migration state. If the name is missing or ambiguous it stops. It does not edit `wrangler.jsonc`: the database id is written to a temporary config that is deleted at the end and never committed.
 4. **Migrate** — `wrangler d1 migrations apply thakbo-db --remote`. Wrangler records every applied file in the table `d1_migrations` (set explicitly in the temporary config), so applied files are skipped on re-runs. If something fails part-way the workflow stops: **no seeding, no verification**.
 5. **Seed** — `db/seeds/0001_reference_data.sql`, then `db/seeds/0002_neighborhoods_and_facilities.sql` (unchanged files, idempotent), only after all migrations succeeded. Re-running re-applies the seed-managed names/labels of the seeded places and facilities; rows you add yourself are untouched.
 6. **Verify** — the run fails unless everything below is true.
@@ -161,7 +192,7 @@ It refuses to continue (and changes nothing) when the database **already has tab
 ### Expected verification results (fresh database, after `apply`)
 | Check | Expected |
 |---|---|
-| Migrations recorded | `8/8` in the order 0000 … 0007 |
+| Migrations recorded | `9/9` in the order 0000 … 0008 |
 | Required tables | `21/21` (Better Auth: user, session, account, verification, rateLimit; THAKBO tables; `d1_migrations`) |
 | countries / divisions / districts / cities | `1/1/1/1` (Bangladesh, Rajshahi division, Rajshahi district, Rajshahi city with Bangla name) |
 | Rajshahi active areas | `10` (Hetem Khan, Ghoshpara, Shaheb Bazar, Talaimari, Kazla, Motihar, Binodpur, Upashahar, Laxmipur, Sopura) |
@@ -281,7 +312,8 @@ Server-side guards for `/dashboard/*` and `/admin/*` (admin role comes only from
 * Not yet verified by a real install/build (CI will show).
 * Better Auth + D1 behaviour (D1 has no interactive transactions) has not been tested at runtime.
 * `app/server/*` repository files rely on React Router removing server-only imports from browser bundles; if the build reports a "server-only module" error, the developer assistant must rename those modules to `*.server.ts`.
-* Password reset, e-mail verification, contact form, image upload UI, map, favorites, reports and admin tools are not built (later milestones).
+* Milestone A risks: migration 0008 (triggers) has been verified only against SQLite, not against real Cloudflare D1; search still accepts `lat`/`lng`/`radius`, which a determined visitor could probe to estimate a listing's position (to be addressed with the radius-search milestone); the type-check, lint, Vitest and build steps have to be run by CI (see the Milestone A report).
+* Password reset, e-mail verification, contact form, public photo gallery, interactive map, favorites, reports and admin tools are not built (later milestones).
 * Fields from the MVP spec such as room/bathroom counts and an "account status" are not in the schema yet.
 
 ## Milestones

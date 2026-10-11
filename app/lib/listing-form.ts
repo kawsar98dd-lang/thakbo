@@ -11,6 +11,9 @@ export interface ListingFormValues {
   subAreaId: string;
   address: string;
   landmark: string;
+  /** Precise point of the place (private: owner and moderators only). Empty until chosen with the location picker. */
+  latitude: string;
+  longitude: string;
   rentAmount: string;
   advanceAmount: string;
   mealCost: string;
@@ -41,6 +44,8 @@ export const EMPTY_LISTING_FORM: ListingFormValues = {
   subAreaId: "",
   address: "",
   landmark: "",
+  latitude: "",
+  longitude: "",
   rentAmount: "",
   advanceAmount: "",
   mealCost: "",
@@ -70,6 +75,8 @@ export function valuesFromForm(form: FormData): ListingFormValues {
     subAreaId: field("subAreaId"),
     address: field("address"),
     landmark: field("landmark"),
+    latitude: field("latitude"),
+    longitude: field("longitude"),
     rentAmount: field("rentAmount"),
     advanceAmount: field("advanceAmount"),
     mealCost: field("mealCost"),
@@ -93,6 +100,8 @@ export function valuesFromListing(listing: OwnedListingDetail): ListingFormValue
     subAreaId: text(listing.subAreaId),
     address: text(listing.address),
     landmark: text(listing.landmark),
+    latitude: text(listing.latitude),
+    longitude: text(listing.longitude),
     rentAmount: text(listing.rentAmount),
     advanceAmount: text(listing.advanceAmount),
     mealCost: text(listing.mealCost),

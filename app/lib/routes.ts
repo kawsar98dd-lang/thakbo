@@ -36,6 +36,9 @@ export const listingPath = (slug: string) => `/listing/${encodeURIComponent(slug
 export const cityPath = (city: string) => `/city/${encodeURIComponent(city)}`;
 export const areaPath = (city: string, area: string) =>
   `/area/${encodeURIComponent(city)}/${encodeURIComponent(area)}`;
+export const listingImagePath = (imageId: string) => `/images/${encodeURIComponent(imageId)}`;
+export const listingImagesActionPath = (listingId: string) => `/dashboard/listings/${encodeURIComponent(listingId)}/images`;
+export const adminListingPath = (listingId: string) => `/admin/listings/${encodeURIComponent(listingId)}`;
 export const editListingPath = (id: string) => `/dashboard/listings/${encodeURIComponent(id)}/edit`;
 
 /** Paths listed in the sitemap that do not depend on database content. */

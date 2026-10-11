@@ -1,5 +1,8 @@
 import { data } from "react-router";
-import type { ListingFormActionData, ListingFormValues } from "~/lib/listing-form";
+import { resolveLocationFields } from "~/lib/coordinates";
+import { valuesFromForm, type ListingFormActionData, type ListingFormValues } from "~/lib/listing-form";
+import { formToObject } from "~/lib/validation/form";
+import { LISTING_DRAFT_FIELDS, LISTING_DRAFT_MULTI_FIELDS } from "~/lib/validation/listing";
 import { getActiveAreaById, listActiveSubAreas, searchAreas, type AreaOption } from "./db/repositories/locations";
 
 const toId = (value: string): number | null => {
@@ -41,4 +44,23 @@ export async function invalidFormResponse(db: D1Database, values: ListingFormVal
     { saved: false, errors, values, selectedArea: location.selectedArea, subAreas: location.subAreas },
     { status: 400 },
   );
+}
+
+/**
+ * Reads the listing form: the text to re-show after an error, the whitelisted fields for validation, and — only when
+ * the browser sent no coordinates but a pasted map link — the coordinates read LOCALLY from that link (never fetched).
+ */
+export function readListingForm(form: FormData): {
+  values: ListingFormValues;
+  raw: Record<string, unknown>;
+  locationError: string | undefined;
+} {
+  const values = valuesFromForm(form);
+  const raw = formToObject(form, LISTING_DRAFT_FIELDS, LISTING_DRAFT_MULTI_FIELDS);
+  const location = resolveLocationFields({ latitude: raw.latitude, longitude: raw.longitude, link: form.get("locationLink") });
+  raw.latitude = location.latitude;
+  raw.longitude = location.longitude;
+  if (typeof location.latitude === "string") values.latitude = location.latitude;
+  if (typeof location.longitude === "string") values.longitude = location.longitude;
+  return { values, raw, locationError: location.error };
 }

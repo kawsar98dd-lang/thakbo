@@ -1,7 +1,7 @@
 import { MEDIA_LIMITS } from "~/lib/constants";
 
 /**
- * Foundation for listing images (Milestone 3 builds the upload UI on top of this).
+ * Listing images (validation, keys, R2 access). The upload/serve flow lives in image-service.server.ts.
  * Flow: browser → Worker (validates) → R2 (bytes) → D1 listing_images (object_key only).
  * R2 is reached through the MEDIA_BUCKET binding: no access keys exist or are needed.
  */
@@ -41,4 +41,12 @@ export async function putListingImage(bucket: R2Bucket, key: string, bytes: Uint
 
 export async function deleteListingImage(bucket: R2Bucket, key: string): Promise<void> {
   await bucket.delete(key);
+}
+
+/** Content type for an object key we generated ourselves (extension is always one of ours). */
+export function mimeFromKey(key: string): ImageMime | null {
+  if (key.endsWith(".jpg")) return "image/jpeg";
+  if (key.endsWith(".png")) return "image/png";
+  if (key.endsWith(".webp")) return "image/webp";
+  return null;
 }

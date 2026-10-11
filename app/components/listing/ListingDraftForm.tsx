@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
-import { Form } from "react-router";
+import { Form, useNavigation } from "react-router";
 import { CheckboxGroup } from "~/components/forms/CheckboxGroup";
 import { SelectField } from "~/components/forms/SelectField";
-import { SubmitButton } from "~/components/forms/SubmitButton";
 import { TextAreaField } from "~/components/forms/TextAreaField";
 import { TextField } from "~/components/forms/TextField";
 import { Alert } from "~/components/ui/Alert";
+import { Button } from "~/components/ui/Button";
 import {
   AUDIENCES,
   AUDIENCE_LABELS,
@@ -20,6 +20,7 @@ import type { ListingFormValues } from "~/lib/listing-form";
 import type { Facility } from "~/server/db/repositories/facilities";
 import type { AreaOption, City } from "~/server/db/repositories/locations";
 import { AreaPicker } from "./AreaPicker";
+import { LocationPicker } from "./LocationPicker";
 
 interface ListingDraftFormProps {
   cities: City[];
@@ -29,7 +30,10 @@ interface ListingDraftFormProps {
   selectedArea: AreaOption | null;
   initialAreas: AreaOption[];
   initialSubAreas: AreaOption[];
-  submitLabel: string;
+  /** Buttons at the bottom of the form; the clicked one is sent to the server as `intent`. */
+  actions: Array<{ intent: string; label: string; pendingText: string; variant?: "primary" | "secondary" }>;
+  /** Explains what saving does for this listing (draft, rejected, live...). */
+  saveNote: string;
   /** True while a draft is shown read-only (e.g. an already published listing). */
   readOnly?: boolean;
 }
@@ -54,12 +58,24 @@ export function ListingDraftForm({
   selectedArea,
   initialAreas,
   initialSubAreas,
-  submitLabel,
+  actions,
+  saveNote,
   readOnly = false,
 }: ListingDraftFormProps) {
+  const navigation = useNavigation();
+  const submittingIntent = navigation.state === "submitting" ? String(navigation.formData?.get("intent") ?? "") : null;
+  const problems = [errors.form, errors.images, errors.contact].filter((message): message is string => Boolean(message));
   return (
     <Form method="post" className="space-y-6" noValidate>
-      {errors.form ? <Alert tone="error">{errors.form}</Alert> : null}
+      {problems.length > 0 ? (
+        <Alert tone="error" title="Please fix the following">
+          <ul className="list-disc pl-5">
+            {problems.map((message) => (
+              <li key={message}>{message}</li>
+            ))}
+          </ul>
+        </Alert>
+      ) : null}
       <fieldset disabled={readOnly} className="space-y-6">
         <Section title="1. Basic information">
           <TextField label="শিরোনাম / Title" name="title" defaultValue={values.title} maxLength={120} error={errors.title} hint="Example: Student mess near Shaheb Bazar" />
@@ -110,7 +126,8 @@ export function ListingDraftForm({
             initialAreas={initialAreas}
             initialSubAreas={initialSubAreas}
           />
-          <TextField label="ঠিকানা / Address" name="address" defaultValue={values.address} maxLength={300} error={errors.address} hint="Optional. Shown only as much as you decide in a later step." />
+          <LocationPicker latitude={values.latitude} longitude={values.longitude} error={errors.location ?? errors.latitude ?? errors.longitude} />
+          <TextField label="ঠিকানা / Address" name="address" defaultValue={values.address} maxLength={300} error={errors.address} hint="Optional. Kept private: visitors do not see the exact address." />
           <TextField label="ল্যান্ডমার্ক / Landmark" name="landmark" defaultValue={values.landmark} maxLength={200} error={errors.landmark} hint="Example: Near the central mosque" />
         </Section>
 
@@ -141,8 +158,24 @@ export function ListingDraftForm({
 
       {readOnly ? null : (
         <Section title="8. Save">
-          <p className="text-sm text-slate-600">Your listing is saved as a private draft. It is not visible to anyone else.</p>
-          <SubmitButton pendingText="Saving…">{submitLabel}</SubmitButton>
+          <p className="text-sm text-slate-600">{saveNote}</p>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            {actions.map((action) => (
+              <Button
+                key={action.intent}
+                type="submit"
+                name="intent"
+                value={action.intent}
+                size="lg"
+                variant={action.variant ?? "primary"}
+                className="w-full"
+                disabled={submittingIntent !== null && submittingIntent !== action.intent}
+                loading={submittingIntent === action.intent}
+              >
+                {submittingIntent === action.intent ? action.pendingText : action.label}
+              </Button>
+            ))}
+          </div>
         </Section>
       )}
     </Form>

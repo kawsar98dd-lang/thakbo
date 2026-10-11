@@ -544,3 +544,14 @@ export async function removeAreaAlias(db: D1Database, areaId: number, aliasId: n
   const result = await execute(db, "DELETE FROM area_aliases WHERE id = ? AND area_id = ?", [aliasId, areaId]);
   return result.meta.changes > 0;
 }
+
+/** Centre of an active city, or null when the city is unknown/inactive or has no recorded centre. Used only to CHECK a point. */
+export async function getCityCentre(db: D1Database, cityId: number): Promise<{ latitude: number; longitude: number } | null> {
+  const row = await queryFirst<{ latitude: number | null; longitude: number | null }>(
+    db,
+    "SELECT latitude, longitude FROM cities WHERE id = ? AND is_active = 1",
+    [cityId],
+  );
+  if (!row || row.latitude === null || row.longitude === null) return null;
+  return { latitude: row.latitude, longitude: row.longitude };
+}

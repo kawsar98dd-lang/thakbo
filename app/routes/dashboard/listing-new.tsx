@@ -2,17 +2,16 @@ import { redirect } from "react-router";
 import type { Route } from "./+types/listing-new";
 import { ListingDraftForm } from "~/components/listing/ListingDraftForm";
 import { PageHeader } from "~/components/layout/PageContainer";
-import { EMPTY_LISTING_FORM, valuesFromForm } from "~/lib/listing-form";
-import { PATHS } from "~/lib/routes";
+import { EMPTY_LISTING_FORM } from "~/lib/listing-form";
+import { editListingPath } from "~/lib/routes";
 import { buildMeta } from "~/lib/seo";
 import { fieldErrors } from "~/lib/validation/common";
-import { formToObject } from "~/lib/validation/form";
-import { LISTING_DRAFT_FIELDS, LISTING_DRAFT_MULTI_FIELDS, listingDraftInputSchema } from "~/lib/validation/listing";
+import { listingDraftInputSchema } from "~/lib/validation/listing";
 import { cloudflareContext } from "~/server/context.server";
 import { listActiveFacilities } from "~/server/db/repositories/facilities";
 import { listActiveCities } from "~/server/db/repositories/locations";
 import { getProfile } from "~/server/db/repositories/profiles";
-import { invalidFormResponse, loadLocationFormData } from "~/server/listing-form.server";
+import { invalidFormResponse, loadLocationFormData, readListingForm } from "~/server/listing-form.server";
 import { createListingDraft } from "~/server/listing-service.server";
 import { requireUser } from "~/server/session.server";
 
@@ -34,17 +33,21 @@ export async function action({ context, request }: Route.ActionArgs) {
   const user = requireUser(context, request);
   const { env } = context.get(cloudflareContext);
   const form = await request.formData();
-  const values = valuesFromForm(form);
+  const { values, raw, locationError } = readListingForm(form);
 
-  const parsed = listingDraftInputSchema.safeParse(formToObject(form, LISTING_DRAFT_FIELDS, LISTING_DRAFT_MULTI_FIELDS));
-  if (!parsed.success) return invalidFormResponse(env.DB, values, fieldErrors(parsed.error));
+  const parsed = listingDraftInputSchema.safeParse(raw);
+  if (!parsed.success || locationError) {
+    const errors = parsed.success ? {} : fieldErrors(parsed.error);
+    return invalidFormResponse(env.DB, values, locationError ? { ...errors, location: locationError } : errors);
+  }
 
   const result = await createListingDraft(env.DB, user.id, parsed.data);
   if (!result.ok) {
     const errors = result.kind === "invalid" ? result.errors : { form: "Your draft could not be saved. Please try again." };
     return invalidFormResponse(env.DB, values, errors);
   }
-  return redirect(PATHS.myListings);
+  // Continue on the edit page, where photos can be added (they need the listing to exist first).
+  return redirect(editListingPath(result.listingId));
 }
 
 export default function NewListing({ loaderData, actionData }: Route.ComponentProps) {
@@ -60,7 +63,8 @@ export default function NewListing({ loaderData, actionData }: Route.ComponentPr
         selectedArea={failed ? failed.selectedArea : loaderData.selectedArea}
         initialAreas={loaderData.initialAreas}
         initialSubAreas={failed ? failed.subAreas : loaderData.subAreas}
-        submitLabel="Save draft"
+        actions={[{ intent: "save", label: "Save draft", pendingText: "Saving…" }]}
+        saveNote="Your listing is saved as a private draft. Next you can add photos and submit it for review."
       />
     </>
   );

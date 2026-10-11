@@ -6,6 +6,9 @@ export default [
   route("api/health", "routes/api/health.ts"),
   route("api/areas", "routes/api/areas.ts"),
   route("logout", "routes/logout.ts"),
+  // Image upload/delete (owner only) and image serving (public only for published listings).
+  route("dashboard/listings/:id/images", "routes/dashboard/listing-images.ts"),
+  route("images/:imageId", "routes/images.ts"),
   route("robots.txt", "routes/seo/robots.ts"),
   route("sitemap.xml", "routes/seo/sitemap.ts"),
 
@@ -46,6 +49,7 @@ export default [
       route("admin", "routes/admin/index.tsx"),
       route("admin/users", "routes/admin/users.tsx"),
       route("admin/listings", "routes/admin/listings.tsx"),
+      route("admin/listings/:id", "routes/admin/listing-review.tsx"),
       route("admin/reports", "routes/admin/reports.tsx"),
       route("admin/locations", "routes/admin/locations.tsx"),
       route("admin/facilities", "routes/admin/facilities.tsx"),

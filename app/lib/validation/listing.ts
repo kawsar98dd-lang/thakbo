@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { AUDIENCES, AVAILABILITY_STATUSES, PROPERTY_TYPES } from "../constants";
+import { isInBangladesh, LOCATION_MESSAGES } from "../coordinates";
 import { emptyToUndefined, optionalText } from "./common";
 
 const taka = z.coerce.number().int("Enter a whole number.").min(0).max(100_000_000);
@@ -107,6 +108,10 @@ export const listingDraftInputSchema = z
   })
   .refine((value) => (value.latitude === undefined) === (value.longitude === undefined), {
     message: "Provide both latitude and longitude, or neither.",
+    path: ["latitude"],
+  })
+  .refine((value) => value.latitude === undefined || value.longitude === undefined || isInBangladesh(value.latitude, value.longitude), {
+    message: LOCATION_MESSAGES.outsideBangladesh,
     path: ["latitude"],
   })
   .refine((value) => value.availabilityStatus !== "available_from" || value.availableFrom !== undefined, {

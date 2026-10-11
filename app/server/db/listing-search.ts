@@ -26,14 +26,18 @@ export interface BuiltQuery {
   params: SqlValue[];
 }
 
+/**
+ * PRIVACY: this projection is sent to anonymous visitors. It must never contain the internal listing id, the exact
+ * address, latitude/longitude, owner data, contact details or storage object keys (a test enforces this).
+ * Coordinates may still be used in WHERE clauses below, but are never selected.
+ */
 export const LISTING_CARD_COLUMNS = `
-  l.id, l.slug, l.title, l.property_type AS propertyType, l.availability_status AS availabilityStatus,
+  l.slug, l.title, l.property_type AS propertyType, l.availability_status AS availabilityStatus,
   l.rent_amount AS rentAmount, l.meal_cost AS mealCost, l.electricity_cost AS electricityCost,
-  l.wifi_cost AS wifiCost, l.other_monthly_cost AS otherMonthlyCost,
-  l.latitude, l.longitude, l.updated_at AS updatedAt,
+  l.wifi_cost AS wifiCost, l.other_monthly_cost AS otherMonthlyCost, l.updated_at AS updatedAt,
   c.name AS cityName, c.slug AS citySlug, a.name AS areaName, a.slug AS areaSlug,
-  (SELECT li.object_key FROM listing_images li WHERE li.listing_id = l.id
-   ORDER BY li.sort_order ASC, li.id ASC LIMIT 1) AS coverImageKey`;
+  (SELECT li.id FROM listing_images li WHERE li.listing_id = l.id
+   ORDER BY li.sort_order ASC, li.id ASC LIMIT 1) AS coverImageId`;
 
 export function buildListingSearchQuery(search: SearchParams): BuiltQuery {
   const where: string[] = ["l.status = 'published'"];

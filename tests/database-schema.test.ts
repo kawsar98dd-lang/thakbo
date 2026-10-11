@@ -111,7 +111,9 @@ describe("listing constraints", () => {
     db.raw.prepare(INSERT_LISTING).run("l1", "u1", "same-slug", "mess");
     expect(rejection(db, INSERT_LISTING, "l2", "u1", "same-slug", "room")).toContain("UNIQUE");
     expect(rejection(db, "UPDATE listings SET rent_amount = -1 WHERE id = 'l1'")).toContain("CHECK");
-    expect(rejection(db, "UPDATE listings SET status = 'published' WHERE id = 'l1'")).toContain("CHECK");
+    // Without city/area/coordinates/rent the CHECK constraint refuses any non-draft status. (From a draft the 0008 trigger
+    // answers first for 'published'; the constraint itself is proven with a status that the trigger allows.)
+    expect(rejection(db, "INSERT INTO listings (id, owner_id, slug, property_type, status) VALUES ('l9', 'u1', 's9', 'mess', 'published')")).toContain("CHECK");
   });
 
   it("accepts every audience of the extended list and rejects unknown ones", () => {

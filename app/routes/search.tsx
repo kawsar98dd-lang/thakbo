@@ -47,7 +47,7 @@ export default function Search({ loaderData }: Route.ComponentProps) {
         ) : (
           <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {result.items.map((listing) => (
-              <li key={listing.id}>
+              <li key={listing.slug}>
                 <ListingCard listing={listing} />
               </li>
             ))}

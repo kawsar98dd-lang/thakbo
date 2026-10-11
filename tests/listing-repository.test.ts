@@ -10,7 +10,7 @@ import {
   setOwnedListingStatus,
   updateOwnedDraft,
 } from "~/server/db/repositories/listings";
-import { draftData, facilityId } from "./helpers/listings";
+import { draftData, facilityId, walkToStatus } from "./helpers/listings";
 import { createTestDatabase, insertUser, seededAreaId, seededCityId, type TestDatabase } from "./helpers/sqlite-d1";
 
 const ID_A = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -23,11 +23,12 @@ function setup(): TestDatabase {
   return db;
 }
 
-/** Makes a listing look like a complete, public one (the real publish flow arrives in Milestone 3). */
+/** Makes a listing complete and moves it to `status` through legal steps (the database refuses anything else). */
 function forcePublished(db: TestDatabase, id: string, status: string = "published") {
   db.raw
-    .prepare("UPDATE listings SET status = ?, city_id = ?, area_id = ?, latitude = 24.37, longitude = 88.6, rent_amount = 3000, title = 'Public place' WHERE id = ?")
-    .run(status, seededCityId(db), seededAreaId(db, "hetem-khan"), id);
+    .prepare("UPDATE listings SET city_id = ?, area_id = ?, latitude = 24.37, longitude = 88.6, rent_amount = 3000, title = 'Public place' WHERE id = ?")
+    .run(seededCityId(db), seededAreaId(db, "hetem-khan"), id);
+  walkToStatus(db, id, status);
 }
 
 const searchAll = (db: TestDatabase) => searchListings(db.d1, parseSearchParams(new URLSearchParams("")));
@@ -195,7 +196,7 @@ describe("public visibility", () => {
     await createDraftListing(db.d1, "owner", draftData(), { id: ID_A, slug: "visible-slug" });
     forcePublished(db, ID_A);
     expect((await getPublishedListingBySlug(db.d1, "visible-slug"))?.title).toBe("Public place");
-    expect((await searchAll(db)).items.map((i) => i.id)).toEqual([ID_A]);
+    expect((await searchAll(db)).items.map((i) => i.slug)).toEqual(["visible-slug"]);
   });
 
   it("hides every non-published status from public queries", async () => {
