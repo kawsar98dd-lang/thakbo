@@ -27,6 +27,8 @@ describe("uploading", () => {
     expect(rowCount(db)).toBe(3);
     const keys = [...bucket.objects.keys()];
     expect(keys).toHaveLength(3);
+    // The stored content type comes from the file's bytes (never from the browser), one per real format.
+    expect([...bucket.contentTypes.values()].sort()).toEqual(["image/jpeg", "image/png", "image/webp"]);
     for (const key of keys) expect(key).toMatch(/^listings\/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\/[0-9a-f-]{36}\.(jpg|png|webp)$/);
   });
 

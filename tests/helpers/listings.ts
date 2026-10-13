@@ -1,4 +1,5 @@
 import type { DraftListingData } from "~/server/db/repositories/listings";
+import type { ImageBucket } from "~/server/image-service.server";
 import type { ListingDraftInput } from "~/lib/validation/listing";
 import type { TestDatabase } from "./sqlite-d1";
 
@@ -140,27 +141,33 @@ export function walkToStatus(db: TestDatabase, listingId: string, status: string
   if (status === "paused") db.raw.prepare("UPDATE listings SET status = 'paused' WHERE id = ?").run(listingId);
 }
 
-export interface FakeBucket {
+/**
+ * In-memory stand-in for the R2 binding. It is declared as an `ImageBucket` (the exact contract the image service
+ * depends on), so the compiler checks the fake against the service's real needs. It also remembers the content type
+ * each object was stored with, and has switches to simulate storage failures.
+ */
+export interface FakeBucket extends ImageBucket {
   objects: Map<string, Uint8Array>;
+  contentTypes: Map<string, string>;
   failPut: boolean;
   failDelete: boolean;
-  put(key: string, value: Uint8Array): Promise<void>;
-  delete(key: string): Promise<void>;
 }
 
-/** In-memory stand-in for the R2 binding, with switches to simulate storage failures. */
 export function fakeBucket(): FakeBucket {
   const bucket: FakeBucket = {
     objects: new Map(),
+    contentTypes: new Map(),
     failPut: false,
     failDelete: false,
-    async put(key, value) {
+    async put(key, value, options) {
       if (bucket.failPut) throw new Error("R2 put failed");
       bucket.objects.set(key, value);
+      bucket.contentTypes.set(key, options.httpMetadata.contentType);
     },
     async delete(key) {
       if (bucket.failDelete) throw new Error("R2 delete failed");
       bucket.objects.delete(key);
+      bucket.contentTypes.delete(key);
     },
   };
   return bucket;

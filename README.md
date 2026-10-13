@@ -149,6 +149,9 @@ Nothing in the code mentions Rajshahi. A new city or neighborhood is only **new 
 `draft → pending` (owner, needs a photo) · `pending → published | rejected` (moderator only) · `pending → draft` (owner withdraws) · `published → pending` (owner edits) · `published/paused/rejected → draft` (owner) · `published → paused` (owner) · `paused/rejected → pending` (owner resubmits) · any → `deleted` (owner, soft delete).
 Moderation compare-and-set: the update only succeeds while the listing is still `pending` and the reviewer is not its owner, so of two simultaneous decisions exactly one wins. Migration 0008 adds triggers that refuse illegal transitions, a decision by anyone who is not a *different*, registered `admin_users` member (administrators cannot approve their own listing), a listing entering review without a photo, and a rejection without a 10–500 character reason.
 
+### Photo storage contract
+`app/server/image-service.server.ts` depends on the small `ImageBucket` interface (store bytes with a content type; delete a key), not on Cloudflare's full `R2Bucket` type. The real binding satisfies it (the compiler checks this where the upload route passes `env.MEDIA_BUCKET`), and the in-memory fake used by tests is declared as an `ImageBucket`, so both are checked against the same contract.
+
 ### Moderation history
 `listing_moderation_events` receives one row for **every** status change, written by a database trigger, so no code path can change a status without leaving a record (actor, role, action, from/to status, reason, time). The admin review page shows it.
 
