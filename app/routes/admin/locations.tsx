@@ -38,7 +38,7 @@ export async function action({ context, request }: Route.ActionArgs) {
   return data({ ok, message: ok ? "Area visibility updated." : "Area not found, or its city/parent is inactive." }, { status: ok ? 200 : 409 });
 }
 export default function AdminLocations({ loaderData, actionData }: Route.ComponentProps) {
-  const { locations, total, page, pageSize, totalPages, query } = loaderData;
+  const { locations, total, page, totalPages, query } = loaderData;
   const activeCities = new Set(locations.filter((l) => l.cityActive).map((l) => l.citySlug));
   const activeAreas = locations.filter((l) => l.areaActive).length;
   const pageUrl = (target: number) => `/admin/locations?${new URLSearchParams({ ...(query ? { q: query } : {}), page: String(target) })}`;

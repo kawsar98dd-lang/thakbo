@@ -37,7 +37,7 @@ export function SearchFilters({ cities, facilities, values, areaInput, areaSearc
           : "Could not get your location. Try again or paste a Google Maps link.");
     }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 });
   };
-  const useMapLink = () => {
+  const handleMapLink = () => {
     const parsed = parseLocationInput(locationLink);
     if (!parsed.ok) {
       setGeoMessage(describeLocationError(parsed.reason));
@@ -73,8 +73,8 @@ export function SearchFilters({ cities, facilities, values, areaInput, areaSearc
         <div className="mt-3 space-y-2">
           <label htmlFor="searchLocationLink" className="block text-sm font-medium text-slate-800">Or paste a full Google Maps link</label>
           <div className="flex flex-col gap-2 sm:flex-row">
-            <input id="searchLocationLink" type="text" inputMode="url" autoComplete="off" value={locationLink} onChange={(event) => setLocationLink(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); useMapLink(); } }} placeholder="https://www.google.com/maps/…" className="min-h-11 min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 text-base text-slate-900 placeholder:text-slate-400" />
-            <Button type="button" variant="secondary" onClick={useMapLink}>Use map link</Button>
+            <input id="searchLocationLink" type="text" inputMode="url" autoComplete="off" value={locationLink} onChange={(event) => setLocationLink(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); handleMapLink(); } }} placeholder="https://www.google.com/maps/…" className="min-h-11 min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 text-base text-slate-900 placeholder:text-slate-400" />
+            <Button type="button" variant="secondary" onClick={handleMapLink}>Use map link</Button>
           </div>
           <p className="text-xs text-slate-500">Short links may not contain readable coordinates. Open them in Maps and copy the full link instead.</p>
         </div>
