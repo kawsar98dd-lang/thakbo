@@ -5,7 +5,7 @@ It starts in **Rajshahi** but is built for many cities. One account lets a perso
 
 > The project was first generated under the temporary name "NIVORA". The official working brand is now **THAKBO**.
 
-**Status: Milestone 1 (foundation) is verified green in GitHub Actions. Milestone 2 (profiles, neighborhood-first locations, facilities, listing drafts) is implemented and awaiting its first GitHub Actions run — see "Milestone 2" below for exactly what was and was not verified.**
+**Current source status (14 October 2026):** foundation, profiles, neighborhood-first location data, listing drafts/moderation, image handling, saved places, listing reports, admin report review and expanded search controls are present in the source. Recent edits fixed an admin-user query column mismatch, changed multi-select search controls to phone-friendly checkboxes, added English/Bangla area-alias resolution to search, made the save action sign-in-aware, widened the rounded-coordinate prefilter to avoid false negatives near radius boundaries, and added a privacy-rounded approximate distance label to location-based search cards. The admin location catalogue also now supports server-side search and pagination, so location rows beyond the previous fixed 500-row limit are reachable. These edits have **not** yet been verified by GitHub Actions or a live Cloudflare deployment.
 
 ## বাংলায় সংক্ষেপে
 * আপনার কম্পিউটারে কিছু চালাতে হবে না। প্রজেক্ট GitHub-এ আপলোড করলে **GitHub Actions** নিজে ক্লাউডে সব যাচাই করবে।
@@ -21,13 +21,12 @@ It starts in **Rajshahi** but is built for many cities. One account lets a perso
 | Code, configuration, migrations, README, CI workflow written | ✅ Done |
 | SQL migrations + seed run on a real SQLite engine (also repeated automatically in CI by `scripts/verify-sql.py`) | ✅ Verified (in the authoring environment) |
 | Syntax check of all `.ts/.tsx` files | ✅ No syntax errors (**not** a full type-check) |
-| `npm install` (dependency resolution) | ⏳ **Not yet verified.** The first GitHub run **failed** here (`Cannot read properties of null (reading 'edgesOut')`); the cause was diagnosed and fixed (see "Dependency notes"), but the fix has **not** been confirmed by a new run yet |
+| `npm ci` (dependency resolution) | ⏳ **Not verified for this update.** The authoring environment has no registry access/cache for at least one locked package; dependency installation did not complete. The Node version here is also below the project minimum. |
 | Type-check, lint, unit tests, production build | ⏳ **Not yet executed** — run in GitHub Actions |
 | Worker runtime, server rendering, Better Auth sign-up/login against a real D1 database | ❌ **Never tested** — needs Cloudflare resources (see "Remaining risks") |
-| `package-lock.json` | ⏳ Not generated yet — it can only be created where the npm registry is reachable (GitHub). Use the "THAKBO Generate lockfile" workflow. It is never faked. |
+| `package-lock.json` | ✅ Present in the supplied branch ZIP. If dependency declarations change, regenerate it in a registry-connected environment or use the lockfile workflow; never hand-edit or fake it. |
 
-The authoring environment had no internet access, so nothing that needs `npm` could run there. A green CI run is the proof; until it exists, treat the project as **unverified**.
-Package versions were chosen from current documentation; **the first CI run may reveal version or type problems — that is expected and is what CI is for.**
+The authoring environment could not complete dependency installation because the npm registry was unreachable and the local cache did not contain every locked package. A green CI run is the proof; until it exists, treat this update as **not fully verified**. Package/type errors may still be reported by GitHub Actions.
 
 ---
 
@@ -43,7 +42,7 @@ The owner does **not** need to run npm commands on a personal computer. GitHub A
 
 What THAKBO CI runs, in order: SQL migrations/seed check → install npm 11 → install dependencies (prints npm's debug log if it fails) → type-check (`wrangler types`, `react-router typegen`, `tsc`) → ESLint → Vitest tests (including a Better Auth schema contract test) → production build → Cloudflare Worker dry-run (informational only).
 
-**Lockfile (one tap):** until `package-lock.json` exists, CI uses `npm install` (and attaches the generated lockfile to the run as a downloadable "package-lock" artifact). The recommended way: open *Actions → THAKBO Generate lockfile → Run workflow*. It resolves all dependencies on GitHub's server, checks them with `npm ci --dry-run`, and saves the real `package-lock.json` into the repository. Afterwards run THAKBO CI again; it automatically switches to the stricter `npm ci`. (If GitHub reports a permissions error: *Settings → Actions → General → Workflow permissions → Read and write permissions*.)
+**Lockfile:** `package-lock.json` is committed. CI uses `npm ci` for reproducible dependency installation. If the lockfile must be regenerated, use *Actions → THAKBO Generate lockfile → Run workflow* and then re-run CI.
 
 ## Dependency notes (why the first install failed and what was changed)
 
@@ -122,7 +121,7 @@ Nothing in the code mentions Rajshahi. A new city or neighborhood is only **new 
 | Check | Status |
 |---|---|
 | SQL migrations + both seeds (twice) on real SQLite (`scripts/verify-sql.py`) | ✅ passed in the authoring environment |
-| Repository / service / schema tests (location, facilities, profile, listing, schema) executed against real SQLite | ✅ passed in the authoring environment using a small stand-in test runner (not Vitest itself) |
+| Repository / service / schema tests from the earlier Milestone 2 work | Historical result: passed with a small stand-in runner (not Vitest itself); this does not verify the current changes |
 | Zod validation tests, auth-guard tests, `npm ci`, type-check, lint, Vitest, production build | ⏳ **Not run** in the authoring environment (no npm registry). They run in GitHub Actions. |
 
 ### Limitations / decisions
@@ -131,11 +130,11 @@ Nothing in the code mentions Rajshahi. A new city or neighborhood is only **new 
 * Listing statuses keep the existing set (`draft`, `pending`, `published`, `paused`, `rejected`, `deleted`); `rented` lives in `availability_status`.
 * Only the English/Bangla labels of cities, neighborhoods, facilities, property types and audiences exist. A full Bangla UI switch is not part of this milestone.
 * The neighborhood picker needs JavaScript (it loads results from `/api/areas`).
-* No image upload, map, radius search, favorites, contact flow or admin screens were added.
+* Listing image upload, location-point entry, radius search, favorites, contact flow and moderation screens are implemented in the current source; see the October 2026 implementation update below for what remains.
 
 ## Milestone A — listing submission and admin moderation
 
-**Status: implemented and tested locally. NOT applied to production.** Migration `0008_listing_moderation.sql` exists in the repository but has **not** been run against the production D1 database; nothing was deployed, and no secret was changed.
+**Source status: implemented; local SQLite migration/seed verification passes. NOT applied to production.** Migration `0008_listing_moderation.sql` exists in the repository but has **not** been run against the production D1 database from this work; nothing was deployed, and no secret was changed.
 
 ### What owners can do
 * Save and edit **drafts** without any minimum (no photo, location or contact needed).
@@ -149,6 +148,9 @@ Nothing in the code mentions Rajshahi. A new city or neighborhood is only **new 
 `draft → pending` (owner, needs a photo) · `pending → published | rejected` (moderator only) · `pending → draft` (owner withdraws) · `published → pending` (owner edits) · `published/paused/rejected → draft` (owner) · `published → paused` (owner) · `paused/rejected → pending` (owner resubmits) · any → `deleted` (owner, soft delete).
 Moderation compare-and-set: the update only succeeds while the listing is still `pending` and the reviewer is not its owner, so of two simultaneous decisions exactly one wins. Migration 0008 adds triggers that refuse illegal transitions, a decision by anyone who is not a *different*, registered `admin_users` member (administrators cannot approve their own listing), a listing entering review without a photo, and a rejection without a 10–500 character reason.
 
+### Photo storage contract
+`app/server/image-service.server.ts` depends on the small `ImageBucket` interface (store bytes with a content type; delete a key), not on Cloudflare's full `R2Bucket` type. The real binding satisfies it (the compiler checks this where the upload route passes `env.MEDIA_BUCKET`), and the in-memory fake used by tests is declared as an `ImageBucket`, so both are checked against the same contract.
+
 ### Moderation history
 `listing_moderation_events` receives one row for **every** status change, written by a database trigger, so no code path can change a status without leaving a record (actor, role, action, from/to status, reason, time). The admin review page shows it.
 
@@ -156,13 +158,18 @@ Moderation compare-and-set: the update only succeeds while the listing is still 
 `/admin/listings` (pending queue, oldest first; tabs for rejected/published/paused) and `/admin/listings/:id` (full details including the private address, map point and owner phone/WhatsApp, photos, history, approve and reject with a mandatory reason). Both re-check `admin_users` on the server in the loader and the action.
 
 ### Privacy
-Anonymous pages and JSON no longer contain the internal listing id, exact address, latitude/longitude, owner data, contact numbers or storage keys (search cards and the public detail query were changed; a test scans the serialized output). Photos are served by `/images/:id` from the **private** R2 bucket: images of published listings are public (cached 5 min); everything else is visible only to the owner (and moderators for pending/paused/rejected listings), is `private, no-store`, and unauthorised requests get 404. Responses carry `nosniff`, a sandboxing CSP and `Content-Disposition: inline`.
+Public search cards and area APIs do not contain the internal listing id, exact address, latitude/longitude, owner identifiers or storage keys. The public listing detail intentionally displays only the owner-provided phone/WhatsApp numbers as the contact mechanism; it never exposes the exact street address, pin coordinates, owner id or storage keys. Radius search rounds coordinates to two decimals before filtering/sorting to reduce exact-pin inference. Photos are served by `/images/:id` from the **private** R2 bucket: images of published listings are public (cached 5 min); everything else is visible only to the owner (and moderators for pending/paused/rejected listings), is `private, no-store`, and unauthorised requests get 404. Responses carry `nosniff`, a sandboxing CSP and `Content-Disposition: inline`.
 
 ### Database change (additive only — nothing in 0000–0007 was touched)
 `0008_listing_moderation.sql`: four new nullable columns on `listings` (`submitted_at`, `reviewed_at`, `reviewed_by`, `rejection_reason`), the `listing_moderation_events` table with indexes and foreign keys, and three triggers. The existing coordinate `CHECK` constraint was **not** changed. `scripts/production_db.py` now lists 0008 in `EXPECTED_MIGRATIONS` (all of its safety checks still apply); running the production workflow would apply 0008, so run it only when you decide to.
 
-### Not included (later milestones)
-Public photo gallery and contact buttons, interactive map picker, radius search redesign, image re-ordering, notifications to owners.
+### Current implementation update (October 2026)
+The current source includes the public listing photo gallery, estimated monthly cost and deposit, public area/landmark map link, facility/audience details, phone/WhatsApp contact buttons, authenticated favorite saving/removal, listing reports with duplicate-pending-report protection, and admin report review/status notes. Search supports minimum/maximum rent, phone-friendly multi-select checkboxes for property type/audience/facilities, availability date, browser geolocation, a configurable radius, nearest-first ordering when coordinates are supplied, approximate distance labels based on privacy-rounded coordinates, and a clear-filters link. The radius-search control also accepts a full Google Maps link and extracts Bangladesh coordinates locally in the browser, so users can search around a chosen point without manually typing latitude/longitude; short links that require a network lookup are not resolved. The dashboard and admin overview also show database-backed summaries. A regression test now covers the Better Auth `createdAt` column used by the admin user list.
+
+The admin Users page remains read-only to avoid unsafe account suspension. The Locations page now supports server-side search by area/city name or slug, pagination, and an admin-only, validated hide/enable action for areas; it preserves area rows and public slugs, and re-enabling requires active city and parent hierarchy. The Facilities page supports an admin-only, validated enable/hide action that preserves existing facility rows and listing references; renaming/editing catalogue values remains disabled until an audit/recovery workflow exists. Settings remain runtime diagnostics only. The map link opens the selected area in Google Maps; a fully embedded interactive map with listing pins is still not implemented. Search distance is a Bangladesh-local equirectangular approximation, not a geodesic guarantee. Image re-ordering and owner notifications remain future work.
+
+### Verification boundary
+This ZIP has been source-edited and syntax-parsed (150 TypeScript/TSX files, zero syntax diagnostics), and the SQL migration/seed verification script has been run successfully in local SQLite. A focused SQLite check also confirms the admin user-list query orders users by Better Auth’s actual `createdAt` column. Full `npm run check` could not be completed in the authoring environment: its installed Node.js is v22.16.0 while this project and React Router 8.4.0 require Node.js >=22.22.0, and dependency installation could not fetch every locked package. The production DB fake-Wrangler self-test also did not complete within the local time limit, so it remains unverified here. Do not treat this as a green CI result or as proof of Cloudflare deployment. After uploading the ZIP to GitHub, run the repository CI workflow; resolve any actual runner diagnostics before deploying. No production D1 migration, Cloudflare secret, or deployment was run from this ZIP.
 
 ## Production database initialization (manual GitHub workflow)
 
@@ -213,7 +220,7 @@ Seed (and migration) SQL must **not** use `UNION` / `UNION ALL` / `EXCEPT` / `IN
 * **Red at Verify:** read the `PROBLEM:` lines; do not ignore them.
 
 ### Verification status of this workflow
-* ✅ The tooling logic (`scripts/production_db.py`) passes 47 tests (`scripts/production_db_test.py`) using a **fake wrangler** over a real SQLite file and the project's real migrations/seeds: fresh init, re-run, existing user data, untracked schema, unknown migrations, partial failure + rerun, failing seed, verification failures, secret hygiene, manual-only trigger.
+* ✅ The tooling logic (`scripts/production_db.py`) passes 48 tests (`scripts/production_db_test.py`) using a **fake wrangler** over a real SQLite file and the project's real migrations/seeds: fresh init, re-run, existing user data, untracked schema, unknown migrations, partial failure + rerun, failing seed, verification failures, secret hygiene, manual-only trigger.
 * ⏳ **Never run against real Cloudflare.** Not yet verified with the real wrangler: the exact `d1 list --json` field names, `migrations apply` behavior without a terminal, the temporary config's `migrations_table`, `PRAGMA foreign_key_check` and `execute --file` on remote D1. The first real run (start with `check`) will show this; a failure there stops safely before any change.
 
 ## Technology
@@ -267,10 +274,20 @@ No secret is ever stored in Git. `.env.example` documents the names only. THAKBO
 1. **D1:** dashboard → *Storage & Databases → D1 SQL database → Create* → name `thakbo-db`. Note its **Database ID**.
 2. **R2:** *R2 object storage → Create bucket* → name `thakbo-media` (R2 may ask for a payment method to enable its free tier — check Cloudflare's current terms).
 3. **Connect the Worker:** *Workers & Pages → Create → Import a repository* → choose your GitHub repo. Build command `npm run build`, deploy command `npx wrangler deploy`.
-4. **Bind the database:** `wrangler.jsonc` needs the database id inside the `d1_databases` entry. Add one line `"database_id": "<your id>",` using GitHub's web editor (pencil icon) — or ask the developer assistant to do it for you if you send the id (the id is not a secret). *Unverified:* recent Wrangler versions can create missing resources automatically on deploy; if this works for you the step is unnecessary.
-5. **Create the tables:** D1 → `thakbo-db` → *Console*: paste and run each file from `db/migrations/` **in order** (`0000` … `0005`), then optionally `db/seeds/0001_reference_data.sql` (safe to run twice).
+4. **Bind the database:** For predictable migrations and remote database operations, create/identify `thakbo-db` and add its real `database_id` to the `d1_databases` entry using GitHub's web editor. Wrangler also supports automatic resource provisioning in supported deploy flows, so a missing production ID is not by itself proof that a deploy must fail; the actual authenticated Cloudflare build result is decisive. Do not guess an ID.
+5. **Create the tables:** use the repository's documented GitHub Actions workflow `THAKBO Initialize Production D1` in `check` mode first. Do not paste only some migrations by hand; the project has migrations `0000` through `0008` and a guarded workflow that checks the existing database before applying them.
 6. **Secret:** Worker → *Settings → Variables and Secrets → Add* → `BETTER_AUTH_SECRET` = a long random text (type "Secret").
 7. Open `https://<your-worker>/api/health` — expected `{"status":"ok","database":"ok"}`.
+
+
+### Cloudflare Preview build status (important)
+The `previews` block is required by Cloudflare Workers Builds, but a block alone does not make the preview fully runnable. The current repository has no `previews.d1_databases` binding, so Preview is not ready to use the database-backed app. Cloudflare's Wrangler documentation supports automatic provisioning for D1 in some deploy flows, but a Preview should be explicitly isolated with its own D1 database ID; never let a Preview share production data. The checker distinguishes this Preview blocker from an absent production ID, which Wrangler may provision automatically depending on the authenticated deploy flow. It also blocks a Preview `MEDIA_BUCKET` that reuses the production bucket name.
+
+Run this read-only diagnostic in GitHub Actions or a Python environment:
+```bash
+python3 scripts/check-preview-config.py
+```
+It does not contact Cloudflare or change any resource. To finish setup, the owner should create a separate preview D1 database (for example `thakbo-db-preview`) and the preview R2 bucket (`thakbo-media-preview`) in the same Cloudflare account, then add the real Preview D1 ID/binding under `previews.d1_databases` in `wrangler.jsonc`. **Never point a Preview at the production D1 database.** Configure `BETTER_AUTH_SECRET` in Cloudflare Preview Base secrets separately; never commit it. After those account-specific steps, re-run the diagnostic with `--strict` and inspect the Cloudflare build logs. The diagnostic is a repository config check, not a live account check.
 
 ### Option B — Wrangler commands (needs a terminal, e.g. free GitHub Codespaces in a browser)
 ```bash
@@ -294,7 +311,7 @@ INSERT INTO admin_users (user_id, role) SELECT id, 'admin' FROM "user" WHERE ema
 * Migrations: `0000` Better Auth tables (+`rateLimit`), `0001` profiles/admin, `0002` locations, `0003` facilities, `0004` listings/images/facilities/audiences, `0005` favorites/reports. Never edit an applied migration — add a new numbered file.
 * Location chain country → division → district → city → area: **new cities are only new rows**, no code change.
 * Listings allow incomplete rows only while `status = 'draft'`; `status = 'deleted'` is a soft delete; money is whole taka; estimated monthly cost is calculated in code, never stored.
-* Seed data: Bangladesh → Rajshahi (approximate city centre, area coordinates intentionally empty) + 14 facilities. **No fake users or listings.**
+* Seed data: Bangladesh → Rajshahi (approximate city centre, area coordinates intentionally empty) + 22 facilities. **No fake users or listings.**
 * All queries use bound parameters; the public search builder is unit-tested against injection.
 
 ## Better Auth decisions
@@ -306,18 +323,18 @@ INSERT INTO admin_users (user_id, role) SELECT id, 'admin' FROM "user" WHERE ema
 * Password reset and e-mail verification are **not enabled** (they need an e-mail provider).
 
 ## Security summary
-Server-side guards for `/dashboard/*` and `/admin/*` (admin role comes only from `admin_users`); owner checks in SQL (`getOwnedListing`); cross-site POST check; open-redirect-safe login redirects; security headers on every response; log redaction of passwords/tokens/cookies; no `dangerouslySetInnerHTML` (lint-enforced); image uploads (future) validated by real file bytes, type and size, with server-generated object keys. A strict Content-Security-Policy and rate limiting beyond sign-in are planned for Milestone 8.
+Server-side guards for `/dashboard/*` and `/admin/*` (admin role comes only from `admin_users`); owner checks in SQL (`getOwnedListing`); cross-site POST origin check; open-redirect-safe login redirects; security headers on every response; log redaction of passwords/tokens/cookies; no `dangerouslySetInnerHTML` (lint-enforced); image uploads validated by real file bytes, type and size, with server-generated object keys. Broader abuse/rate limiting beyond authentication remains a hardening task.
 
 ## Remaining risks / known limitations
 * Not yet verified by a real install/build (CI will show).
 * Better Auth + D1 behaviour (D1 has no interactive transactions) has not been tested at runtime.
 * `app/server/*` repository files rely on React Router removing server-only imports from browser bundles; if the build reports a "server-only module" error, the developer assistant must rename those modules to `*.server.ts`.
-* Milestone A risks: migration 0008 (triggers) has been verified only against SQLite, not against real Cloudflare D1; search still accepts `lat`/`lng`/`radius`, which a determined visitor could probe to estimate a listing's position (to be addressed with the radius-search milestone); the type-check, lint, Vitest and build steps have to be run by CI (see the Milestone A report).
-* Password reset, e-mail verification, contact form, public photo gallery, interactive map, favorites, reports and admin tools are not built (later milestones).
+* Migration 0008 (triggers) has been verified only against SQLite, not against real Cloudflare D1. Radius search uses coordinates rounded to two decimal places before filtering/sorting to reduce exact-pin inference; this is still approximate location privacy, not a guarantee against all inference.
+* Password reset and e-mail verification are not enabled because they need an e-mail provider. The contact page remains informational; a submitted contact-message workflow is not implemented. An embedded interactive map with listing pins is not yet implemented.
 * Fields from the MVP spec such as room/bathroom counts and an "account status" are not in the schema yet.
 
 ## Milestones
-1 Foundation ✅ · 2 Profiles, neighborhood-first locations, facilities, listing drafts (implemented, awaiting CI) · 3 R2 upload + listing wizard · 4 Map + search + radius · 5 Listing details, favorites, contact, reports · 6 User dashboard · 7 Admin + moderation · 8 SEO, polish, performance, security, deployment.
+1 Foundation · 2 Profiles, neighborhood-first locations, facilities, listing drafts · 3 R2 upload + listing wizard · 4 Search filters and approximate radius search (embedded map remains) · 5 Listing details, favorites, contact, reports · 6 User dashboard · 7 Admin overview, listing moderation and report review (read-only catalogue/user pages) · 8 SEO, polish, performance, security, deployment.
 
 ## Troubleshooting
 * **Uploading `.github` from a phone:** some mobile browsers hide dot-folders. Use github.com's *Add file → Create new file* and type the path `.github/workflows/ci.yml`, pasting the file content; repeat for `generate-lockfile.yml`. Or ask for help — this can also be done in a free browser Codespace.
@@ -325,3 +342,26 @@ Server-side guards for `/dashboard/*` and `/admin/*` (admin role comes only from
 * **CI red at "Type-check", "Lint", "Unit tests" or "Production build":** copy the failing step's log.
 * `Invalid server configuration ... BETTER_AUTH_SECRET` → set the secret (Cloudflare step 6).
 * `no such table` → run the migrations (Cloudflare step 5).
+
+
+### Admin user directory (v8 update)
+The admin user directory supports a read-only search by account name, display name, or email and paginates results to 25 accounts per page. Search values are parameterized and SQL LIKE wildcard characters are treated literally. Account suspension and role editing are intentionally not exposed; do not use this page as an account-recovery or access-control workflow.
+
+### Recent update (v9)
+The admin report queue now supports server-side pagination and displays the total number of reports, avoiding the previous silent 200-row ceiling. The report status filter is preserved during navigation. See `THAKBO_UPDATE_REPORT.txt` for validation results and remaining production-readiness checks.
+
+
+## October 2026 update — Admin location catalogue pagination (v10)
+
+The Admin Locations page now searches area/city names and slugs, paginates 25 records at a time, reports the matching record count, and clamps stale page numbers. Search input is length-limited and SQL LIKE wildcard characters are escaped; query values are bound parameters. This removes the previous UI/repository fixed 500-row ceiling for the admin location catalogue. Area enablement still validates the city and parent hierarchy on the server.
+
+Verification for this update: `python3 scripts/verify-sql.py` passed (all 9 migrations, repeatable seeds, 21 tables and foreign-key check); `python3 scripts/production_db_test.py RepositoryRules -v` passed (6 tests); a focused Python SQLite smoke test passed for location search, literal `%`/`_` matching behavior, pagination and stale-page clamping. Full Vitest, semantic TypeScript type-check, ESLint, production build, GitHub Actions and Cloudflare live behavior remain unverified because dependency installation did not complete in the authoring environment. Do not treat this update as production-ready or as a green CI result.
+
+## October 2026 update — Admin city catalogue (v13)
+
+The admin area now includes `/admin/cities`, with server-side search by city name, Bangla/English city name, slug, district, and division; results are paginated in groups of 25. Admins can hide a city from public location selection without deleting its row, slug, areas, or listing references. Re-enabling is guarded server-side: the district, division, and country must all be active. Both the loader and mutation action require admin authorization; submitted IDs are validated and database values are bound parameters. This is visibility management, not a UI for creating cities or editing administrative geography.
+
+Validation for v13: SQL migration/seed verification and Python configuration tests are run separately from the application tests. Full Vitest, semantic TypeScript type-check, lint, production build, GitHub Actions, and Cloudflare live behavior are not claimed as passed unless the corresponding runner result is available. Do not deploy solely on the basis of local SQL smoke checks.
+
+### Preview D1 binding (v17)
+The Preview-only D1 binding now uses the database ID supplied for `thakbo-preview`. Before deploying, confirm in the Cloudflare dashboard that this ID belongs to the intended Preview database, that `thakbo-media-preview` exists, and that required Preview secrets are configured. The local checker passing is not proof of a successful Cloudflare deployment.

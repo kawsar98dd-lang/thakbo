@@ -29,6 +29,37 @@ describe("listing search SQL builder", () => {
     expect(build("sort=price_asc").sql).toContain("ORDER BY l.rent_amount ASC");
     expect(build("sort=nonsense").sql).toContain("ORDER BY l.published_at DESC");
   });
+  it("uses radius as a real distance boundary and binds all distance placeholders", () => {
+    const { sql, params } = build("lat=24.37&lng=88.6&radius=3&sort=distance");
+    expect(sql).toContain("ROUND(l.latitude, 2) BETWEEN ? AND ? AND ROUND(l.longitude, 2) BETWEEN ? AND ?");
+    expect(sql).toContain("ROUND(l.longitude, 2)");
+    expect(sql).toContain("ORDER BY (((ROUND(l.latitude, 2) - ?)");
+    expect((sql.match(/\?/g) ?? []).length).toBe(params.length);
+    expect(params.slice(-2)).toEqual([21, 0]);
+  });
+  it("returns only a privacy-rounded approximate distance for location searches", () => {
+    const { sql, params } = build("lat=24.37&lng=88.6&radius=3");
+    expect(sql).toContain("AS approximateDistanceSquared");
+    expect(sql).not.toContain("l.latitude AS latitude");
+    expect(sql).not.toContain("l.longitude AS longitude");
+    expect((sql.match(/\?/g) ?? []).length).toBe(params.length);
+    // SELECT placeholders come before WHERE placeholders and use the search point only.
+    expect(params.slice(0, 8)).toEqual([24.37, 24.37, 88.6, 24.37, 24.37, 88.6, 24.37, 24.37]);
+  });
+  it("returns no distance when the search has no target coordinates", () => {
+    expect(build("").sql).toContain("NULL AS approximateDistanceSquared");
+  });
+  it("falls back from distance sort when no target coordinates exist", () => {
+    expect(build("sort=distance").sql).toContain("ORDER BY l.published_at DESC");
+  });
+  it("widens the bounding-box prefilter for rounded coordinates", () => {
+    const { params } = build("lat=24.37&lng=88.6&radius=3");
+    // The first eight parameters compute the SELECT-only approximate distance. The next four are
+    // the conservatively expanded latitude/longitude bounds.
+    expect(params.slice(8, 12)).toEqual(expect.arrayContaining([expect.any(Number)]));
+    expect(params[8]).toBeLessThan(24.37 - 3 / 111.32);
+    expect(params[9]).toBeGreaterThan(24.37 + 3 / 111.32);
+  });
 });
 
 describe("image validation", () => {

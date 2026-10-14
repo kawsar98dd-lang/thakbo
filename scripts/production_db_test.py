@@ -16,10 +16,12 @@ import re
 import shutil
 import sqlite3
 import stat
+import subprocess
 import sys
 import tempfile
 import unittest
 from contextlib import redirect_stdout
+from unittest.mock import patch
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
@@ -101,7 +103,7 @@ class ToolTestCase(unittest.TestCase):
         self.log = self.temp / "calls.jsonl"
         self.env = {
             "THAKBO_REPO_ROOT": str(self.root),
-            "WRANGLER": f"{sys.executable} {fake}",
+            "WRANGLER": f"{sys.executable} -S {fake}",
             "FAKE_D1_DB": str(self.db),
             "FAKE_D1_LOG": str(self.log),
             "CLOUDFLARE_API_TOKEN": SECRET,
@@ -181,6 +183,13 @@ class RepositoryRules(ToolTestCase):
         self.assertEqual(self.run_tool("preflight"), 1)
         self.assertIn("CLOUDFLARE_API_TOKEN", self.output)
         self.assertEqual(self.calls(), [])
+
+    def test_wrangler_timeout_is_reported_as_a_safe_tool_error(self) -> None:
+        with patch("production_db.subprocess.run", side_effect=subprocess.TimeoutExpired(["wrangler"], 120)):
+            with self.assertRaises(tool.ToolError) as caught:
+                tool.wrangler(["d1", "list", "--json"])
+        self.assertIn("timed out after 120 seconds", str(caught.exception))
+        self.assertNotIn(SECRET, str(caught.exception))
 
 
 class DatabaseLookup(ToolTestCase):

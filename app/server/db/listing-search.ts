@@ -17,6 +17,7 @@ const SORT_SQL: Record<SearchSort, string> = {
   price_asc: "l.rent_amount ASC, l.id ASC",
   price_desc: "l.rent_amount DESC, l.id ASC",
   updated: "l.updated_at DESC, l.id DESC",
+  distance: "distanceSquared ASC, l.published_at DESC, l.id ASC",
 };
 
 const placeholders = (count: number) => Array.from({ length: count }, () => "?").join(", ");
@@ -42,6 +43,13 @@ export const LISTING_CARD_COLUMNS = `
 export function buildListingSearchQuery(search: SearchParams): BuiltQuery {
   const where: string[] = ["l.status = 'published'"];
   const params: SqlValue[] = [];
+  const pointProvided = search.lat !== undefined && search.lng !== undefined;
+  const lat = search.lat ?? 0;
+  const lng = search.lng ?? 0;
+  // Privacy: only use coordinates rounded to 2 decimals (~1 km grid) for radius filtering/sorting.
+  // Using exact owner pins in WHERE would let anonymous users triangulate a property by repeatedly probing radii.
+  // Equirectangular distance is an approximation; longitude degrees shrink with latitude, approximated without SQLite extensions.
+  const distanceSquared = `(((ROUND(l.latitude, 2) - ?) * 111.32) * ((ROUND(l.latitude, 2) - ?) * 111.32) + ((ROUND(l.longitude, 2) - ?) * (111.32 * (1 - (? * ? * 0.0001523)))) * ((ROUND(l.longitude, 2) - ?) * (111.32 * (1 - (? * ? * 0.0001523)))) )`;
 
   if (search.city) {
     where.push("c.slug = ?");
@@ -84,23 +92,37 @@ export function buildListingSearchQuery(search: SearchParams): BuiltQuery {
     params.push(search.availableBy);
   }
   if (search.lat !== undefined && search.lng !== undefined && search.radiusKm !== undefined) {
-    // Cheap indexed pre-filter. Exact distance/sorting by distance arrives with Milestone 4.
     const box = boundingBox({ latitude: search.lat, longitude: search.lng }, search.radiusKm);
-    where.push("l.latitude BETWEEN ? AND ? AND l.longitude BETWEEN ? AND ?");
-    params.push(box.minLat, box.maxLat, box.minLng, box.maxLng);
+    // The indexed prefilter compares coordinates rounded to 2 decimals. Expand the box by half a grid cell
+    // so rounding near a radius edge does not incorrectly discard a candidate before the distance check.
+    const gridPadding = 0.0051;
+    where.push("ROUND(l.latitude, 2) BETWEEN ? AND ? AND ROUND(l.longitude, 2) BETWEEN ? AND ?");
+    params.push(
+      Math.max(-90, box.minLat - gridPadding), Math.min(90, box.maxLat + gridPadding),
+      Math.max(-180, box.minLng - gridPadding), Math.min(180, box.maxLng + gridPadding),
+    );
+    // Apply a distance check after the indexed bounding-box prefilter, not just the rectangle.
+    where.push(`${distanceSquared} <= (? * ?)`);
+    params.push(search.lat, search.lat, search.lng, search.lat, search.lat, search.lng, search.lat, search.lat, search.radiusKm, search.radiusKm);
   }
 
   // Fetch one extra row so the caller knows whether another page exists (no COUNT(*) scan).
   const limit = search.pageSize + 1;
   const offset = (search.page - 1) * search.pageSize;
 
-  const sql = `SELECT ${LISTING_CARD_COLUMNS}
+  const useDistanceSort = search.sort === "distance" && pointProvided;
+  const orderBy = useDistanceSort ? distanceSquared : search.sort === "distance" ? SORT_SQL.newest : SORT_SQL[search.sort];
+  // Return only an approximate distance derived from coordinates rounded to a 0.01-degree grid.
+  // Never select the listing's actual latitude/longitude into public search results.
+  const selectDistance = pointProvided ? `${distanceSquared} AS approximateDistanceSquared` : "NULL AS approximateDistanceSquared";
+  const selectParams: SqlValue[] = pointProvided ? [lat, lat, lng, lat, lat, lng, lat, lat] : [];
+  const sql = `SELECT ${LISTING_CARD_COLUMNS}, ${selectDistance}
 FROM listings l
 JOIN cities c ON c.id = l.city_id
 JOIN areas a ON a.id = l.area_id
 WHERE ${where.join("\n  AND ")}
-ORDER BY ${SORT_SQL[search.sort]}
+ORDER BY ${orderBy}
 LIMIT ? OFFSET ?`;
-
-  return { sql, params: [...params, limit, offset] };
+  const orderParams: SqlValue[] = useDistanceSort ? [lat, lat, lng, lat, lat, lng, lat, lat] : [];
+  return { sql, params: [...selectParams, ...params, ...orderParams, limit, offset] };
 }

@@ -1,0 +1,331 @@
+THAKBO PROJECT UPDATE REPORT — v17 (Preview D1 binding configured)
+Prepared: 2026-10-14
+Base: THAKBO-updated-project-2026-10-14-v16.zip
+
+WORK COMPLETED
+- Added the user-provided D1 database ID `d6645494-9dfd-4916-9eec-a040b3404ef7` to the Preview-only `DB` binding in `wrangler.jsonc`, with resource name `thakbo-preview` and the existing migrations directory.
+- Kept the production `thakbo-db` binding unchanged and retained the distinct Preview R2 bucket name `thakbo-media-preview`.
+- Updated the Preview config regression test to require the configured Preview ID and assert that the current configuration has no static blockers.
+- No Cloudflare API calls, deployment, remote repository changes, or production database operations were performed. The supplied ID is configured locally; its existence and account association are not remotely verified here.
+
+VALIDATION STATUS
+- `python3 scripts/check-preview-config-test.py -v`: PASSED (7 tests).
+- `python3 scripts/check-preview-config.py --strict`: PASSED with 0 static blockers; still reports manual checks for actual R2 bucket existence and Preview secrets, plus a warning that production D1 has no committed ID.
+- `python3 scripts/verify-sql.py`: PASSED (9 migrations, repeatable seeds, 21 tables, foreign-key check).
+- `python3 scripts/production_db_test.py -v`: PASSED (48 tests).
+- Full npm install, semantic TypeScript type-check, ESLint, Vitest, production build, GitHub CI and Cloudflare Preview deployment remain NOT VERIFIED.
+
+REMAINING
+- Confirm in Cloudflare that the supplied D1 ID belongs to the newly created `thakbo-preview` database.
+- Confirm `thakbo-media-preview` exists and configure required Preview secrets without copying production secrets blindly.
+- Run full npm-based checks in a registry-connected environment and verify the actual Cloudflare Preview deployment before production readiness.
+
+SAFETY
+- Local source ZIP only; not pushed, merged, or deployed. Production resources and secrets were not touched.
+
+---
+
+THAKBO PROJECT UPDATE REPORT — v16 (Preview storage isolation guard)
+Prepared: 2026-10-14
+Base: THAKBO-updated-project-2026-10-14-v15.zip
+
+WORK COMPLETED
+- Strengthened `scripts/check-preview-config.py`: if a production `MEDIA_BUCKET` is configured, the checker now blocks Preview when its R2 bucket name matches production.
+- Added a regression test proving that Preview must not share the production image bucket. This guards against test/preview uploads mixing with live listing photos.
+- No Cloudflare resource IDs were invented; the separate Preview D1 database is still a real account-setup prerequisite and remains reported as a blocker until its actual ID is configured.
+
+VALIDATION STATUS
+- `python3 scripts/check-preview-config-test.py -v`: PASSED (7 tests).
+- `python3 scripts/verify-sql.py`: PASSED (9 migrations, idempotent seeds, 21 tables, foreign-key check).
+- `python3 scripts/production_db_test.py`: PASSED (48 tests, 14.729 seconds).
+- Full npm install again could not complete in this environment (command timed out); type-check, ESLint, Vitest and production build remain NOT VERIFIED.
+- GitHub Actions, Cloudflare Preview and production deployment remain NOT VERIFIED. No remote changes were made.
+
+REMAINING
+- Run npm install/type-check/lint/Vitest/build in a registry-connected environment or GitHub Actions.
+- Configure a real, isolated Preview D1 database ID and confirm Preview secrets/bucket exist in Cloudflare.
+- Complete application-level security and user-flow testing before production readiness.
+
+SAFETY
+- This is a local source ZIP only. It has not been pushed, merged or deployed. Production database and secrets were not touched.
+
+---
+
+THAKBO PROJECT UPDATE REPORT — v15 (Production DB test-suite runtime fix)
+Prepared: 2026-10-14
+Base: THAKBO-updated-project-2026-10-14-v14.zip
+
+WORK COMPLETED
+- Updated the fake-Wrangler test command to run the Python standard-library-only fixture with `python -S`.
+- This skips site initialization for the isolated test fixture (which only uses Python standard-library modules) and avoids unnecessary startup overhead for each simulated Wrangler command.
+- The earlier report described the full-suite slowdown as a stall. A timed trace showed the individual fake-Wrangler subprocesses were each taking about 0.6–0.8 seconds; after this test-only optimization, the complete suite finishes successfully.
+- Production runtime behavior, SQL migrations, application routes, credentials, Cloudflare resources, and GitHub configuration were not changed in this update.
+
+VALIDATION STATUS
+- `python3 scripts/production_db_test.py -v`: PASSED (48 tests in 16.402 seconds).
+- `python3 scripts/verify-sql.py`: PASSED (9 migrations, repeatable seeds, 21 tables, foreign-key check).
+- `python3 scripts/check-preview-config-test.py -v`: PASSED (6 tests).
+- `python3 scripts/production_db_test.py RepositoryRules -v`: PASSED (7 tests).
+- TypeScript/TSX syntax pass: carried forward from v14/v13; semantic type-check, ESLint, Vitest, and production build remain NOT VERIFIED because a complete npm dependency installation is not available in this environment.
+- GitHub Actions, Cloudflare Preview, and production deployment: NOT VERIFIED. No remote changes were made.
+
+REMAINING
+- Restore a complete dependency install and run type-check, lint, Vitest, and production build.
+- Resolve the separate Preview D1 binding/configuration blocker and verify on GitHub/Cloudflare before considering deployment.
+- Perform application-level security and user-flow checks before production readiness.
+
+SAFETY
+- This is a local source ZIP only. It has not been pushed, merged, or deployed. Production database and secrets were not touched.
+
+---
+
+THAKBO PROJECT UPDATE REPORT — v14 (Wrangler timeout safety)
+Prepared: 2026-10-14
+Base: THAKBO-updated-project-2026-10-14-v13.zip
+
+WORK COMPLETED
+- Added a 120-second timeout to each Wrangler subprocess call in scripts/production_db.py.
+- Wrangler timeout now becomes a concise ToolError instead of an uncaught TimeoutExpired traceback; the message does not include environment variables or secret values.
+- Added a regression test for safe timeout error reporting.
+- No application feature, migration, production database, Cloudflare resource, GitHub branch, or secret was changed.
+
+VALIDATION STATUS
+- `python3 -m py_compile scripts/production_db.py scripts/production_db_test.py`: PASSED.
+- `python3 scripts/verify-sql.py`: PASSED (9 migrations, idempotent seeds, 21 tables, foreign-key check).
+- `python3 scripts/check-preview-config-test.py -v`: PASSED (6 tests).
+- `python3 scripts/production_db_test.py RepositoryRules -v`: PASSED (7 tests, including the new timeout test).
+- `FreshInitialization.test_existing_user_data_survives_a_rerun`: PASSED when run alone (1 test; ~32 seconds).
+- Historical v14 note: the complete suite initially exceeded the local time budget. v15 traced the delay to repeated fake-Wrangler Python startup and fixed the test fixture invocation; all 48 tests now pass in 16.402 seconds.
+- `npm ci`, Vitest, semantic TypeScript type-check, ESLint, and production build: NOT VERIFIED.
+- GitHub Actions, Cloudflare Preview, and production deployment: NOT VERIFIED. No remote changes were made.
+
+REMAINING
+- Diagnose why the production DB test stalls only after preceding tests in the complete suite.
+- Restore a complete dependency install and run type-check, lint, Vitest, and build.
+- Resolve the separate Preview D1 binding/configuration blocker and verify on GitHub/Cloudflare before considering deployment.
+
+SAFETY
+- This is a local source ZIP only. It has not been pushed, merged, or deployed. Production database and secrets were not touched.
+
+
+THAKBO PROJECT UPDATE REPORT — v13 (Admin city catalogue)
+Prepared: 2026-10-14
+Base: THAKBO-updated-project-2026-10-14-v12.zip
+
+WORK COMPLETED
+- Added a separate admin-only City Catalogue at /admin/cities, linked in the admin navigation.
+- Added server-side search by city name, English/Bangla name, slug, district, and division, plus 25-item pagination and stale-page clamping.
+- Added a non-destructive city active/inactive action. It preserves city slug, areas, and listing references.
+- Re-enabling a city is guarded server-side and requires the district, division, and country ancestors to be active.
+- The loader and action both call requireAdmin; submitted city IDs/state are validated and SQL user values are bound parameters.
+- Added regression tests for city search, literal LIKE wildcard handling, pagination, hide/re-enable, preserving areas, and refusing to re-enable under an inactive ancestor.
+- No migration or Cloudflare resource change was made.
+
+VALIDATION STATUS
+- Input ZIP integrity: PASSED before editing.
+- scripts/verify-sql.py: PASSED after changes (9 migrations, repeatable seeds, 21 tables, foreign-key check).
+- scripts/check-preview-config-test.py: PASSED (6 tests).
+- scripts/production_db_test.py RepositoryRules -v: PASSED (6 tests).
+- Full scripts/production_db_test.py: INCOMPLETE; the test `FreshInitialization.test_existing_user_data_survives_a_rerun` hangs in the local environment during the second migrate step. This needs investigation and is not reported as passed.
+- npm ci: INCOMPLETE; dependency installation did not finish in the available environment.
+- Vitest, semantic TypeScript type-check, ESLint, production build: NOT RUN / NOT VERIFIED.
+- GitHub Actions and Cloudflare live deployment: NOT VERIFIED. No GitHub push, merge, remote migration, secret update, or deployment was performed.
+
+REMAINING
+- Run the added Vitest tests on GitHub CI and fix any failures.
+- Investigate the production_db_test rerun hang and dependency installation.
+- Verify Wrangler preview bindings, D1 migration state, R2 access controls, and live mobile behavior before deployment.
+- City catalogue supports visibility toggling only; it does not create cities or edit names/slugs.
+
+SAFETY
+- No production resources or secrets were touched. The new city status action is non-destructive and server-authorized.
+
+
+THAKBO PROJECT UPDATE REPORT — v7
+Prepared: 2026-10-14
+Base: THAKBO-updated-project-2026-10-14-v6.zip
+Brand: THAKBO (থাকবো) — Find Where You Belong.
+
+NEW CHANGE IN THIS ZIP
+- The admin Location catalogue now supports an admin-only enable/hide action for individual areas.
+- The action validates the submitted area ID and requested state on the server and re-checks admin authorization.
+- Hiding an area only sets its is_active flag and updated_at; it does not delete the row or change its public slug.
+- Re-enabling an area is guarded by the active city and administrative ancestor chain; sub-areas additionally require their parent area to be active.
+- Added repository regression tests for hide/re-enable, stable row/slug behavior, parent guard, and unknown IDs.
+- Updated README and this report.
+
+VALIDATION PERFORMED
+- ZIP integrity for the input v6 archive: PASSED before editing.
+- `python3 scripts/verify-sql.py`: PASSED. All 9 migrations applied to local SQLite; both seed files remained idempotent; 21 tables verified; foreign-key check passed.
+- `python3 scripts/production_db_test.py RepositoryRules -v`: PASSED, 6 tests.
+- Focused SQLite smoke test using the exact area UPDATE statements: PASSED for hide/re-enable, refusing to enable a child while its parent is inactive, and preserving the original area row and slug.
+- Full Vitest, semantic TypeScript type-check, ESLint, and production build: NOT RUN. The available node_modules installation is partial and does not contain the Vitest executable; the environment's Node is v22.16.0 while `.nvmrc` requires v22.22.0.
+
+NOT VERIFIED / REMAINING WORK
+- The added Vitest regression cases were not run with Vitest.
+- GitHub Actions results have not been retrieved, and no GitHub push or merge was performed.
+- Cloudflare Worker, production D1, R2 uploads, secrets, production migration 0008, preview configuration, and live mobile UX were NOT tested or changed.
+- Admin Locations can toggle area visibility only; it does not edit names/slugs or add new locations. Admin Users remains read-only.
+- A fully embedded interactive map with listing pins is still not implemented. Password reset/email verification need an email provider. Accessibility, performance, SEO and production smoke tests remain.
+
+SAFETY / PRIVACY
+- No production resource was touched.
+- Both location and facility status actions re-check admin authorization and use bound SQL parameters.
+- Location changes preserve rows and slugs; no destructive migration was added.
+- Public search privacy protections were not changed.
+
+NEXT REQUIRED VERIFICATION
+1. Use Node v22.22.0 or newer compatible with `.nvmrc`, run `npm ci`, then `npm run check`.
+2. Fix any real type-check, lint, test, or build failures before deployment.
+3. Upload changes to the existing fix branch and inspect GitHub Actions; do not merge/deploy until checks pass.
+4. Keep production D1 and Cloudflare deployment unchanged until remote migration and live smoke-test plans have been reviewed.
+
+
+THAKBO PROJECT UPDATE REPORT — v8
+Prepared: 2026-10-14
+Base: THAKBO-updated-project-2026-10-14-v7.zip
+
+NEW CHANGE IN THIS ZIP
+- Replaced the fixed latest-100 admin user list with server-side search and pagination.
+- Admins can search account name, display name, or email; result pages are limited to 25 records.
+- Search input is length-limited and SQL values are bound parameters. SQL LIKE metacharacters (\, %, _) are escaped so a search does not unintentionally become a wildcard query.
+- Page values are bounded; stale out-of-range page links resolve to the last valid page.
+- Account suspension remains intentionally unavailable until a recovery and audit workflow is designed. No user roles or accounts can be modified from this page.
+- Added repository regression tests for search, pagination, case-insensitive name/email lookup, and literal wildcard handling.
+
+VALIDATION PERFORMED FOR v8
+- Python SQLite smoke test using the same LIKE/ESCAPE query shape: PASSED for matching a name/email and treating % as literal text.
+- `python3 scripts/verify-sql.py`: PASSED; all 9 migrations, idempotent seed verification, 21 tables, and foreign-key check succeeded.
+- `python3 scripts/production_db_test.py RepositoryRules -v`: PASSED; 6 safety/configuration tests.
+- Full Vitest/typecheck/lint/build: NOT VERIFIED in this environment because npm dependency installation did not complete and no local Vitest executable is available.
+- No GitHub push, merge, Cloudflare deployment, or production database operation was performed.
+
+SAFETY
+- Admin route retains server-side `requireAdmin` check.
+- Search is read-only and does not change account state.
+- No schema migration or production secret/resource change was added.
+
+
+THAKBO PROJECT UPDATE REPORT — v9
+Prepared: 2026-10-14
+Base: THAKBO-updated-project-2026-10-14-v8.zip
+
+NEW CHANGE IN THIS ZIP
+- Admin Listing Reports now use server-side pagination rather than a fixed 200-row query cap that could silently hide older reports.
+- The admin reports page shows the total count and current page, with Previous/Next navigation while preserving the selected status filter.
+- Report page size is 25 in the UI. Repository page size is bounded to 1–50 and requested pages are bounded; out-of-range pages clamp to the final valid page.
+- Added repository regression coverage for multiple pages, status filtering, and stale page numbers.
+- Admin user pagination now shares finite-integer bounds validation, avoiding NaN/Infinity values becoming SQL LIMIT/OFFSET parameters.
+- No database migration was required. Report statuses, authorization, and review action semantics are unchanged.
+
+VALIDATION PERFORMED FOR v9
+- `python3 scripts/verify-sql.py`: PASSED; all 9 migrations, repeatable seeds, 21 tables, and foreign-key verification.
+- `python3 scripts/production_db_test.py RepositoryRules -v`: PASSED; 6 safety/configuration tests.
+- TypeScript compiler `transpileModule` syntax pass: PASSED for 150 TypeScript/TSX files, zero syntax diagnostics.
+- SQLite smoke test using the same report count/query/pagination shape: PASSED for 26 pending reports over 3 pages, clamping page 999 to page 3, and 27 total reports in all-status view.
+- Full Vitest suite, semantic TypeScript type-check, ESLint, and production build: NOT RUN. `npm ci` could not complete because required packages were not available from the local npm cache; online install did not finish in this environment. Runtime Node is v22.16.0 while `.nvmrc` requires v22.22.0.
+- The newly added Vitest regression test has not been executed by Vitest itself.
+- No GitHub push, merge, Cloudflare deployment, remote migration, or production database operation was performed.
+
+REMAINING IMPORTANT WORK
+- Run `npm ci` on a supported Node version (v22.22.0 or newer), then `npm run check`; fix any actual type/lint/test/build failures.
+- Confirm GitHub Actions results on the existing fix branch before considering merge/deployment.
+- Verify Cloudflare preview configuration, D1 migrations, R2 upload/access controls, secrets, and live smoke tests separately.
+- A fully interactive embedded map with listing pins is not implemented. Password reset/email verification still require a configured email provider. Admin user management remains read-only; user suspension needs a carefully designed recovery/audit workflow.
+
+SAFETY
+- Read-only admin report listing and status filter are server-side; the route still calls `requireAdmin` for loader and action.
+- SQL query values remain bound parameters. No schema or production resource was changed.
+
+
+THAKBO PROJECT UPDATE REPORT — v10
+Prepared: 2026-10-14
+Base: THAKBO-updated-project-2026-10-14-v9.zip
+
+NEW CHANGE IN THIS ZIP
+- Admin Locations now supports server-side search by area name/slug and city name/slug.
+- The previous fixed 500-area listing cap is replaced by pagination, 25 rows per page in the UI.
+- The page shows result count and current page and keeps the search query when navigating pages.
+- Stale/out-of-range page requests clamp to the last valid page in the repository.
+- Search text is length-limited, SQL values are bound parameters, and LIKE wildcard characters (backslash, percent, underscore) are escaped and treated literally.
+- Kept area visibility changes server-authorized; parent hierarchy validation remains enforced in the repository action. The UI no longer assumes a parent is inactive merely because it is on another page.
+- Added regression coverage for location search, pagination, literal wildcard handling and stale-page clamping.
+- No database migration or production resource change was added.
+
+VALIDATION PERFORMED FOR v10
+- ZIP integrity for the v9 input archive: PASSED before editing.
+- `python3 scripts/verify-sql.py`: PASSED; all 9 migrations, repeatable seeds, 21 tables and foreign-key verification.
+- `python3 scripts/production_db_test.py RepositoryRules -v`: PASSED; 6 tests.
+- Focused Python SQLite smoke test using the same location query/LIKE ESCAPE/parameter shape: PASSED for seeded Rajshahi search, literal `%` and `_`, pagination, and stale-page clamping.
+- Full Vitest, semantic TypeScript type-check, ESLint and production build: NOT RUN. `npm ci --ignore-scripts --no-audit --no-fund` did not complete within the available environment time; the local node_modules remains incomplete.
+- The newly added Vitest regression test has not been executed by Vitest itself.
+- GitHub Actions, Cloudflare Worker, production D1/R2, secrets and live mobile UX: NOT VERIFIED. No GitHub push, merge, remote migration or deployment was performed.
+
+NEXT REQUIRED VERIFICATION
+1. On a supported Node version (`.nvmrc`, v22.22.0 or newer), run `npm ci` then `npm run check`.
+2. Fix any real type-check, lint, test or build failures before uploading/merging.
+3. Inspect GitHub Actions on the existing fix branch.
+4. Verify Cloudflare bindings, production migrations, R2 access controls and live smoke tests separately before deployment.
+
+SAFETY
+- Admin loader/action still re-check `requireAdmin`; user-supplied search values are bound parameters.
+- No production resource, secret or database was touched.
+
+THAKBO PROJECT UPDATE REPORT — v11 (Cloudflare Preview readiness)
+Prepared: 2026-10-14
+Base: THAKBO-updated-project-2026-10-14-v10.zip
+
+WORK COMPLETED
+- Investigated the open GitHub PR and confirmed the latest visible Cloudflare preview check on commit 565da4d was marked failed. The Cloudflare dashboard build-log URL redirects to an account login and its detailed log is not publicly readable, so the exact Cloudflare error is not confirmed.
+- Added scripts/check-preview-config.py, a read-only report for the account-specific Wrangler Preview configuration. It never contacts Cloudflare or changes resources.
+- Added offline regression tests for JSONC comment parsing, missing IDs, separate preview DB enforcement, and valid distinct resource configuration.
+- Corrected README guidance: all nine migrations (0000–0008) exist, and Cloudflare resources/IDs are not automatically guaranteed to be created by deployment.
+- Documented the remaining Cloudflare setup requirements for Android/browser users.
+
+VALIDATION PERFORMED
+- ZIP/source base inspection: passed; no source application routes or database migrations changed in this update.
+- python3 scripts/verify-sql.py: passed (9 migrations, idempotent seeds, 21 tables, foreign-key check).
+- python3 scripts/production_db_test.py RepositoryRules -v: passed (6 tests).
+- python3 scripts/check-preview-config-test.py -v: passed (4 tests).
+- python3 scripts/check-preview-config.py: reported blockers as expected: production D1 database_id is absent and Preview has no separate D1 binding. This is a configuration report, not a live Cloudflare test.
+- Full npm ci, Vitest suite, semantic type-check, lint, production build, and Cloudflare deployment: NOT VERIFIED. The current environment's npm cache is empty and npm installation did not complete.
+
+BLOCKERS REQUIRING ACCOUNT-SPECIFIC OWNER ACTION
+- Create or identify the existing production D1 database `thakbo-db` and put its real ID into the production binding.
+- Create a separate Preview D1 database and configure its real ID under `previews.d1_databases`; do not share production data with Preview.
+- Confirm the configured Preview R2 bucket exists in the Cloudflare account.
+- Configure Preview Base secrets, including BETTER_AUTH_SECRET.
+- Re-run Cloudflare Workers Builds and inspect its authenticated build log. This ZIP does not claim the Cloudflare Preview failure is fixed.
+
+SAFETY
+- No GitHub push, PR merge, Cloudflare deployment, secret access, remote D1 migration, or production resource change was performed.
+- No dummy database IDs or secrets were inserted.
+
+THAKBO PROJECT UPDATE REPORT — v12 (Preview configuration diagnostic accuracy)
+Prepared: 2026-10-14
+Base: THAKBO-updated-project-2026-10-14-v11.zip
+
+WORK COMPLETED
+- Corrected the read-only Preview readiness checker so an absent production D1 database_id is reported as a warning, not automatically as a blocker. Current Wrangler documentation supports automatic resource provisioning for D1 in supported deploy flows; this repository-only checker cannot verify whether the connected account has the permissions/configuration for it.
+- Kept a missing Preview D1 binding/ID as a blocker: Preview must use a separately configured database and must never share production data.
+- Added a guard that blocks Preview when its database_name matches the configured production database name, even when one or both IDs are not present.
+- Updated README guidance to distinguish production resource provisioning from Preview database isolation.
+- Added two offline regression tests for missing production ID handling and same-name Preview database refusal.
+
+VALIDATION PERFORMED
+- `python3 scripts/check-preview-config-test.py -v`: PASSED, 6 tests.
+- `python3 scripts/verify-sql.py`: PASSED; all 9 migrations, idempotent seeds, 21 tables, and foreign-key check.
+- `python3 scripts/production_db_test.py RepositoryRules -v`: PASSED, 6 tests.
+- `python3 -m py_compile scripts/check-preview-config.py scripts/check-preview-config-test.py`: PASSED.
+- `python3 scripts/check-preview-config.py`: correctly reports a warning for the absent production ID and a blocker for the missing Preview D1 binding.
+- `npm ci` was attempted but did not complete within the available runtime; full Vitest suite, semantic TypeScript type-check, ESLint, production build, and live Cloudflare validation remain NOT VERIFIED.
+
+SAFETY
+- No account-specific IDs or secrets were invented.
+- No GitHub push, PR merge, Cloudflare deployment, remote migration, or production resource change was performed.
+- No application routes or database migrations were changed in this update.
+
+NEXT REQUIRED WORK
+1. Obtain the authenticated Cloudflare Workers Builds failure log to confirm the actual Preview failure cause.
+2. Create/identify a separate Preview D1 database and configure its real ID under `previews.d1_databases`; verify the Preview R2 bucket and Preview secrets in Cloudflare.
+3. Run `npm ci` and `npm run check` in GitHub Actions on the updated branch; fix actual failures before merge/deploy.

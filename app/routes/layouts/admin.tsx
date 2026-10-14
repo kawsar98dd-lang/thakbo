@@ -27,6 +27,7 @@ export default function AdminLayout() {
           { to: PATHS.adminListings, label: "Listings" },
           { to: PATHS.adminReports, label: "Reports" },
           { to: PATHS.adminLocations, label: "Locations" },
+          { to: PATHS.adminCities, label: "Cities" },
           { to: PATHS.adminFacilities, label: "Facilities" },
           { to: PATHS.adminSettings, label: "Settings" },
         ]}

@@ -30,6 +30,8 @@ describe("search URL parsing", () => {
     const s = sp("city=rajshahi&type=mess&audience=student&max_price=5000");
     expect(s).toMatchObject({ city: "rajshahi", types: ["mess"], audiences: ["student"], maxPrice: 5000, page: 1, sort: "newest" });
     expect(sp("city=rajshahi&area=talaimari")).toMatchObject({ city: "rajshahi", area: "talaimari" });
+    expect(sp("city=rajshahi&area=Hatem%20Khan")).toMatchObject({ city: "rajshahi", area: "Hatem Khan" });
+    expect(sp("area=").area).toBeUndefined();
   });
   it("ignores invalid values instead of failing", () => {
     const s = sp("type=castle&audience=alien&max_price=abc&page=-4&sort=hax&city=Bad Slug!");

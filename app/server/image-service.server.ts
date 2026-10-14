@@ -18,9 +18,21 @@ import { buildListingImageKey, validateImageBytes, type ImageMime } from "./stor
  *   delete: delete row → delete file (a failed file delete only leaves an unreferenced file, which is logged)
  */
 
+/**
+ * The ONLY things this service needs from object storage: store bytes together with a content type, and delete a key.
+ * It never reads the result of either call, so the contract says "any result" (`unknown`) instead of copying
+ * Cloudflare's exact return types. The real `R2Bucket` binding satisfies this (checked by the compiler wherever the
+ * route passes `env.MEDIA_BUCKET`), and so does a simple in-memory fake in tests. Narrowing the contract does not
+ * weaken anything: the service still decides the content type itself and still removes files it cannot register.
+ */
+export interface ImageBucket {
+  put(key: string, value: Uint8Array, options: { httpMetadata: { contentType: string } }): Promise<unknown>;
+  delete(key: string): Promise<unknown>;
+}
+
 export interface ImageDeps {
   db: D1Database;
-  bucket: Pick<R2Bucket, "put" | "delete">;
+  bucket: ImageBucket;
   newId?: () => string;
 }
 
@@ -79,7 +91,7 @@ export async function uploadListingImage(
   return { ok: true, imageId };
 }
 
-async function discardObject(bucket: Pick<R2Bucket, "delete">, key: string): Promise<void> {
+async function discardObject(bucket: Pick<ImageBucket, "delete">, key: string): Promise<void> {
   try {
     await bucket.delete(key);
   } catch (error) {

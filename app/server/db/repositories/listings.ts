@@ -24,6 +24,8 @@ export interface ListingCard {
   areaSlug: string;
   /** Opaque image id served by /images/:id (only works while the listing is published). Never an object key. */
   coverImageId: string | null;
+  /** Approximate distance from the requested search point, based on privacy-rounded coordinates. */
+  approximateDistanceKm?: number | null;
 }
 
 export interface ListingSearchResult {
@@ -35,9 +37,15 @@ export interface ListingSearchResult {
 /** Public search: published listings only, one page at a time. */
 export async function searchListings(db: D1Database, search: SearchParams): Promise<ListingSearchResult> {
   const { sql, params } = buildListingSearchQuery(search);
-  const rows = await queryAll<ListingCard>(db, sql, params);
+  const rows = await queryAll<ListingCard & { approximateDistanceSquared: number | null }>(db, sql, params);
+  const items: ListingCard[] = rows.map(({ approximateDistanceSquared, ...listing }) => ({
+    ...listing,
+    approximateDistanceKm: approximateDistanceSquared === null || approximateDistanceSquared === undefined
+      ? null
+      : Math.sqrt(Math.max(0, approximateDistanceSquared)),
+  }));
   return {
-    items: rows.slice(0, search.pageSize),
+    items: items.slice(0, search.pageSize),
     hasMore: rows.length > search.pageSize,
     page: search.page,
   };

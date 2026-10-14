@@ -23,6 +23,7 @@ export const PATHS = {
   adminListings: "/admin/listings",
   adminReports: "/admin/reports",
   adminLocations: "/admin/locations",
+  adminCities: "/admin/cities",
   adminFacilities: "/admin/facilities",
   adminSettings: "/admin/settings",
   forbidden: "/403",

@@ -118,7 +118,18 @@ def wrangler(args: list[str], *, check: bool = True) -> subprocess.CompletedProc
     command = shlex.split(os.environ.get("WRANGLER", "npx --no-install wrangler")) + args
     env = dict(os.environ)
     env.update({"WRANGLER_SEND_METRICS": "false", "NO_COLOR": "1", "FORCE_COLOR": "0", "CI": "true"})
-    result = subprocess.run(command, cwd=repo_root(), env=env, capture_output=True, text=True, check=False)
+    try:
+        # A hung network/CLI process must not leave a production workflow running forever.
+        result = subprocess.run(
+            command, cwd=repo_root(), env=env, capture_output=True, text=True,
+            check=False, timeout=120,
+        )
+    except subprocess.TimeoutExpired as error:
+        # Do not include the environment or command payload: either could contain sensitive data.
+        raise ToolError(
+            f"wrangler {' '.join(args[:3])} timed out after 120 seconds. "
+            "Check Cloudflare connectivity and the GitHub Actions log, then retry."
+        ) from error
     if check and result.returncode != 0:
         # wrangler output never contains the API token; it is still truncated to keep logs readable.
         raise ToolError(

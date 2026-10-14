@@ -37,7 +37,7 @@ export type ReportStatus = (typeof REPORT_STATUSES)[number];
 export const ADMIN_ROLES = ["admin", "moderator"] as const;
 export type AdminRole = (typeof ADMIN_ROLES)[number];
 
-export const SEARCH_SORTS = ["newest", "price_asc", "price_desc", "updated"] as const;
+export const SEARCH_SORTS = ["newest", "price_asc", "price_desc", "updated", "distance"] as const;
 export type SearchSort = (typeof SEARCH_SORTS)[number];
 
 export const PROPERTY_TYPE_LABELS: Record<PropertyType, string> = {
@@ -176,6 +176,7 @@ export const SEARCH_SORT_LABELS: Record<SearchSort, string> = {
   price_asc: "Lowest price",
   price_desc: "Highest price",
   updated: "Recently updated",
+  distance: "Nearest to me",
 };
 
 export const SEARCH_LIMITS = { defaultPageSize: 20, maxPageSize: 50, maxPage: 100, maxRadiusKm: 25 } as const;

@@ -52,6 +52,7 @@ export default [
       route("admin/listings/:id", "routes/admin/listing-review.tsx"),
       route("admin/reports", "routes/admin/reports.tsx"),
       route("admin/locations", "routes/admin/locations.tsx"),
+      route("admin/cities", "routes/admin/cities.tsx"),
       route("admin/facilities", "routes/admin/facilities.tsx"),
       route("admin/settings", "routes/admin/settings.tsx"),
     ]),

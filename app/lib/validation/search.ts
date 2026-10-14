@@ -8,7 +8,7 @@ import {
   type PropertyType,
   type SearchSort,
 } from "../constants";
-import { slugParam } from "./common";
+import { emptyToUndefined, slugParam } from "./common";
 
 export interface SearchParams {
   city?: string;
@@ -43,7 +43,8 @@ const num = (min: number, max: number) =>
 
 const scalar = z.object({
   city: slugParam.optional().catch(undefined),
-  area: slugParam.optional().catch(undefined),
+  // Area accepts a known English/Bangla alias as well as a canonical slug; the loader resolves it against the selected city.
+  area: z.preprocess(emptyToUndefined, z.string().trim().max(80).optional()).catch(undefined),
   min_price: num(0, 100_000_000).optional().catch(undefined),
   max_price: num(0, 100_000_000).optional().catch(undefined),
   available_from: z.iso.date().optional().catch(undefined),
@@ -82,7 +83,7 @@ export function parseSearchParams(sp: URLSearchParams): SearchParams {
     lat: hasPoint ? s.lat : undefined,
     lng: hasPoint ? s.lng : undefined,
     radiusKm: hasPoint ? (s.radius ?? 3) : undefined,
-    sort: s.sort,
+    sort: s.sort === "distance" && !hasPoint ? "newest" : s.sort,
     page: s.page,
     pageSize: SEARCH_LIMITS.defaultPageSize,
   };
