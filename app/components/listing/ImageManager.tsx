@@ -27,6 +27,36 @@ function DeleteButton({ listingId, imageId }: { listingId: string; imageId: stri
   );
 }
 
+function MoveButton({
+  listingId,
+  imageId,
+  direction,
+  disabled,
+}: {
+  listingId: string;
+  imageId: string;
+  direction: "up" | "down";
+  disabled: boolean;
+}) {
+  const fetcher = useFetcher<ImageActionData>();
+  const intent = direction === "up" ? "move_up" : "move_down";
+  const label = direction === "up" ? "Move photo up" : "Move photo down";
+  return (
+    <fetcher.Form method="post" action={listingImagesActionPath(listingId)}>
+      <input type="hidden" name="intent" value={intent} />
+      <input type="hidden" name="imageId" value={imageId} />
+      <Button type="submit" variant="ghost" loading={fetcher.state !== "idle"} disabled={disabled || fetcher.state !== "idle"} aria-label={label}>
+        {direction === "up" ? "Move up" : "Move down"}
+      </Button>
+      {fetcher.data ? (
+        <span className={fetcher.data.ok ? "sr-only" : "block text-xs text-red-700"} role={fetcher.data.ok ? "status" : "alert"}>
+          {fetcher.data.message}
+        </span>
+      ) : null}
+    </fetcher.Form>
+  );
+}
+
 /** Photos of one listing. Separate from the main form (forms cannot be nested); each action re-checks ownership on the server. */
 export function ImageManager({ listingId, images, editable, error }: ImageManagerProps) {
   const fetcher = useFetcher<ImageActionData>();
@@ -49,10 +79,16 @@ export function ImageManager({ listingId, images, editable, error }: ImageManage
 
       {images.length > 0 ? (
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {images.map((image) => (
+          {images.map((image, index) => (
             <li key={image.id} className="space-y-1">
-              <img src={listingImagePath(image.id)} alt="Listing photo" loading="lazy" className="aspect-[4/3] w-full rounded-lg border border-slate-200 object-cover" />
-              {editable ? <DeleteButton listingId={listingId} imageId={image.id} /> : null}
+              <img src={listingImagePath(image.id)} alt={`Listing photo ${index + 1}`} loading="lazy" className="aspect-[4/3] w-full rounded-lg border border-slate-200 object-cover" />
+              {editable ? (
+                <div className="flex flex-wrap items-center gap-1">
+                  <MoveButton listingId={listingId} imageId={image.id} direction="up" disabled={index === 0} />
+                  <MoveButton listingId={listingId} imageId={image.id} direction="down" disabled={index === images.length - 1} />
+                  <DeleteButton listingId={listingId} imageId={image.id} />
+                </div>
+              ) : null}
             </li>
           ))}
         </ul>

@@ -75,6 +75,20 @@ export function getPublishedListingBySlug(db: D1Database, slug: string): Promise
   );
 }
 
+/** Public listing slugs for sitemap.xml. Never expose drafts, pending, paused, rejected or deleted listings. */
+export function listPublishedListingSlugs(db: D1Database, limit: number = 50_000): Promise<Array<{ slug: string }>> {
+  const safeLimit = Number.isFinite(limit) ? Math.max(0, Math.min(50_001, Math.floor(limit))) : 50_000;
+  if (safeLimit === 0) return Promise.resolve([]);
+  return queryAll<{ slug: string }>(
+    db,
+    `SELECT slug FROM listings
+     WHERE status = 'published'
+     ORDER BY published_at DESC, id DESC
+     LIMIT ?`,
+    [safeLimit],
+  );
+}
+
 export interface OwnedListing {
   id: string;
   title: string | null;

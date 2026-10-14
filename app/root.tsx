@@ -26,11 +26,12 @@ export const links: LinksFunction = () => [
   { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
 ];
 
-export function loader({ context, request }: Route.LoaderArgs): RootLoaderData {
+export function loader({ context }: Route.LoaderArgs): RootLoaderData {
   const user = context.get(currentUserContext);
   return {
     user: user ? { name: user.name, email: user.email } : null,
-    siteOrigin: new URL(request.url).origin,
+    // Always emit production canonicals, including when a request arrives on a preview hostname.
+    siteOrigin: SITE.canonicalOrigin,
   };
 }
 

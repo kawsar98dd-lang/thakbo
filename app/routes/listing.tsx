@@ -4,16 +4,17 @@ import { PageContainer, PageHeader } from "~/components/layout/PageContainer";
 import { Badge } from "~/components/ui/Badge";
 import { Button } from "~/components/ui/Button";
 import { Card } from "~/components/ui/Card";
+import { Breadcrumbs } from "~/components/seo/Breadcrumbs";
 import { Alert } from "~/components/ui/Alert";
-import { AVAILABILITY_LABELS, AUDIENCE_LABELS, PROPERTY_TYPE_LABELS, REPORT_REASONS, type ReportReason } from "~/lib/constants";
+import { AVAILABILITY_LABELS, AUDIENCE_LABELS, PROPERTY_TYPE_LABELS, REPORT_REASONS, SITE, type ReportReason } from "~/lib/constants";
 import { estimateMonthlyCost, formatTaka } from "~/lib/cost";
 import { normalizeContactNumber } from "~/lib/contact";
-import { listingImagePath, PATHS } from "~/lib/routes";
+import { areaPath, cityPath, listingImagePath, PATHS } from "~/lib/routes";
 import { buildMeta } from "~/lib/seo";
 import { slugParam } from "~/lib/validation/common";
 import { cloudflareContext, currentUserContext } from "~/server/context.server";
 import { getPublishedListingBySlug } from "~/server/db/repositories/listings";
-import { getPublicListingExtras, isListingFavorite, submitListingReport, toggleListingFavorite } from "~/server/db/repositories/engagement";
+import { getPublicListingExtras, isListingFavorite, isPublishedListingOwner, submitListingReport, toggleListingFavorite } from "~/server/db/repositories/engagement";
 import { notFound } from "~/server/errors.server";
 import { requireUser } from "~/server/session.server";
 
@@ -32,8 +33,13 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     getPublicListingExtras(env.DB, slug.data),
     Promise.resolve(context.get(currentUserContext)),
   ]);
-  const favorite = user ? await isListingFavorite(env.DB, user.id, slug.data) : false;
-  return { listing, extras, signedIn: Boolean(user), favorite };
+  const [favorite, isOwner] = user
+    ? await Promise.all([
+        isListingFavorite(env.DB, user.id, slug.data),
+        isPublishedListingOwner(env.DB, user.id, slug.data),
+      ])
+    : [false, false];
+  return { listing, extras, signedIn: Boolean(user), favorite, isOwner };
 }
 
 export async function action({ params, context, request }: Route.ActionArgs) {
@@ -58,7 +64,7 @@ export async function action({ params, context, request }: Route.ActionArgs) {
     const submitted = await submitListingReport(env.DB, {
       id: crypto.randomUUID(), slug: slug.data, reporterId: user.id, reason, details: details || null,
     });
-    if (!submitted) return data({ report: "error" as const, message: "This report could not be submitted. You may own this listing, or you may already have a report waiting for review." }, { status: 409 });
+    if (!submitted) return data({ report: "error" as const, message: "This report could not be submitted. You may own this listing, already have a report waiting for review, or have reached the limit of 10 reports per 24 hours." }, { status: 409 });
     return data({ report: "success" as const, message: "Thank you. Your report has been sent to the moderation team." });
   }
   return data({ report: "error" as const, message: "Unknown action." }, { status: 400 });
@@ -67,11 +73,17 @@ export async function action({ params, context, request }: Route.ActionArgs) {
 export function meta({ loaderData }: Route.MetaArgs) {
   if (!loaderData) return buildMeta({ title: "Listing not found", description: "This listing is not available.", noindex: true });
   const { listing } = loaderData;
-  return buildMeta({ title: listing.title, description: `${PROPERTY_TYPE_LABELS[listing.propertyType]} in ${listing.areaName}, ${listing.cityName}.` });
+  const image = listing.coverImageId ? `${SITE.canonicalOrigin}${listingImagePath(listing.coverImageId)}` : undefined;
+  return buildMeta({
+    title: listing.title,
+    description: `${PROPERTY_TYPE_LABELS[listing.propertyType]} in ${listing.areaName}, ${listing.cityName}. Monthly rent: ${formatTaka(listing.rentAmount)}. ${AVAILABILITY_LABELS[listing.availabilityStatus]}.`,
+    image,
+    imageAlt: image ? `Photo of ${listing.title}` : undefined,
+  });
 }
 
 export default function ListingPage({ loaderData, actionData }: Route.ComponentProps) {
-  const { listing, extras, signedIn, favorite } = loaderData;
+  const { listing, extras, signedIn, favorite, isOwner } = loaderData;
   const monthly = estimateMonthlyCost(listing);
   const phone = normalizeContactNumber(extras.phone);
   const whatsapp = normalizeContactNumber(extras.whatsapp);
@@ -80,8 +92,16 @@ export default function ListingPage({ loaderData, actionData }: Route.ComponentP
   const reportError = actionData && "report" in actionData && actionData.report === "error";
   return (
     <PageContainer>
+      <Breadcrumbs items={[
+        { label: "Home", path: "/" },
+        { label: listing.cityName, path: cityPath(listing.citySlug) },
+        { label: listing.areaName, path: areaPath(listing.citySlug, listing.areaSlug) },
+        { label: listing.title },
+      ]} />
       <PageHeader title={listing.title} description={`${listing.areaName}, ${listing.cityName}`} actions={
-        signedIn ? (
+        signedIn && isOwner ? (
+          <span className="inline-flex min-h-11 items-center rounded-lg bg-slate-100 px-4 text-sm font-semibold text-slate-600">Your listing</span>
+        ) : signedIn ? (
           <Form method="post"><input type="hidden" name="intent" value="favorite" />
             <Button type="submit" variant={favorite ? "secondary" : "primary"}>{favorite ? "♥ Saved" : "♡ Save place"}</Button>
           </Form>

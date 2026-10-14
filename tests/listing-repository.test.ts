@@ -6,11 +6,13 @@ import {
   getOwnedListingDetail,
   getPublishedListingBySlug,
   listOwnedListings,
+  listPublishedListingSlugs,
   searchListings,
   setOwnedListingStatus,
   updateOwnedDraft,
 } from "~/server/db/repositories/listings";
 import { draftData, facilityId, walkToStatus } from "./helpers/listings";
+import { listSitemapLocations } from "~/server/db/repositories/locations";
 import { createTestDatabase, insertUser, seededAreaId, seededCityId, type TestDatabase } from "./helpers/sqlite-d1";
 
 const ID_A = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -180,6 +182,46 @@ describe("ownership: status changes", () => {
     expect(await setOwnedListingStatus(db.d1, ID_A, "owner", "draft", "deleted")).toBe(true);
     expect(await getOwnedListing(db.d1, ID_A, "owner")).toBeNull();
     expect(db.raw.prepare("SELECT status FROM listings WHERE id = ?").get(ID_A)).toMatchObject({ status: "deleted" });
+  });
+});
+
+describe("sitemap visibility", () => {
+  it("includes only published listing slugs and respects the requested limit", async () => {
+    const db = setup();
+    await createDraftListing(db.d1, "owner", draftData(), { id: ID_A, slug: "published-slug" });
+    await createDraftListing(db.d1, "owner", draftData(), { id: ID_B, slug: "draft-slug" });
+    forcePublished(db, ID_A);
+
+    expect(await listPublishedListingSlugs(db.d1)).toEqual([{ slug: "published-slug" }]);
+    expect(await listPublishedListingSlugs(db.d1, 0)).toEqual([]);
+    expect(await listPublishedListingSlugs(db.d1, 1)).toEqual([{ slug: "published-slug" }]);
+  });
+
+  it("includes only cities and areas that have a published listing in the location sitemap", async () => {
+    const db = setup();
+    const cityId = seededCityId(db);
+    const areaId = seededAreaId(db, "hetem-khan");
+    await createDraftListing(db.d1, "owner", draftData({ cityId, areaId }), { id: ID_A, slug: "public-location-listing" });
+
+    expect(await listSitemapLocations(db.d1)).toEqual([]);
+    forcePublished(db, ID_A);
+    const locations = await listSitemapLocations(db.d1);
+    expect(locations).toHaveLength(2);
+    expect(locations).toEqual(expect.arrayContaining([
+      { citySlug: "rajshahi", areaSlug: null },
+      { citySlug: "rajshahi", areaSlug: "hetem-khan" },
+    ]));
+  });
+
+  it("excludes listings that are paused, rejected or deleted", async () => {
+    const db = setup();
+    const statuses = ["pending", "paused", "rejected", "deleted"] as const;
+    for (const [index, status] of statuses.entries()) {
+      const id = `dddddddd-dddd-4ddd-8ddd-${String(index + 1).padStart(12, "0")}`;
+      await createDraftListing(db.d1, "owner", draftData(), { id, slug: `not-public-${status}` });
+      forcePublished(db, id, status);
+    }
+    expect(await listPublishedListingSlugs(db.d1)).toEqual([]);
   });
 });
 

@@ -4,6 +4,8 @@ export const SITE = {
   name: "THAKBO",
   nameBn: "থাকবো",
   tagline: "Find Where You Belong.",
+  /** Canonical production origin; update this single value if THAKBO moves to a custom domain. */
+  canonicalOrigin: "https://thakbo.kawsar98dd.workers.dev",
   description:
     "THAKBO helps you discover mess, rooms, flats, houses and sublets around the place you want to live in Bangladesh.",
 } as const;

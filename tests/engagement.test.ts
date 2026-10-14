@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getPublicListingExtras, isListingFavorite, listFavoriteListings, submitListingReport, toggleListingFavorite } from "~/server/db/repositories/engagement";
+import { getPublicListingExtras, isListingFavorite, isPublishedListingOwner, listFavoriteListings, submitListingReport, toggleListingFavorite } from "~/server/db/repositories/engagement";
 import { createDraftListing } from "~/server/db/repositories/listings";
 import { draftData, walkToStatus } from "./helpers/listings";
 import { createTestDatabase, insertUser, seededAreaId, seededCityId } from "./helpers/sqlite-d1";
@@ -25,8 +25,11 @@ describe("favorites and reports", () => {
     expect(await listFavoriteListings(db.d1, "seeker")).toEqual([]);
   });
 
-  it("does not let an owner save their own listing", async () => {
+  it("does not let an owner save their own listing and identifies the owner for the public UI", async () => {
     const db = createTestDatabase(); await publishedListing(db);
+    expect(await isPublishedListingOwner(db.d1, "owner", "public-place")).toBe(true);
+    expect(await isPublishedListingOwner(db.d1, "seeker", "public-place")).toBe(false);
+    expect(await isPublishedListingOwner(db.d1, "owner", "missing-place")).toBe(false);
     expect(await toggleListingFavorite(db.d1, "owner", "public-place")).toBe(false);
     expect(await listFavoriteListings(db.d1, "owner")).toEqual([]);
   });
@@ -36,6 +39,19 @@ describe("favorites and reports", () => {
     expect(await submitListingReport(db.d1, { id: REPORT_ID, slug: "public-place", reporterId: "reporter", reason: "wrong_information", details: "The rent is different." })).toBe(true);
     expect(await submitListingReport(db.d1, { id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd", slug: "public-place", reporterId: "reporter", reason: "spam", details: null })).toBe(false);
     expect(db.raw.prepare("SELECT status, reason FROM reports WHERE id = ?").get(REPORT_ID)).toMatchObject({ status: "pending", reason: "wrong_information" });
+  });
+
+  it("limits each account to 10 reports in a rolling 24-hour window", async () => {
+    const db = createTestDatabase(); insertUser(db, "reporter"); await publishedListing(db);
+    for (let i = 0; i < 10; i++) {
+      db.raw.prepare(
+        "INSERT INTO reports (id, listing_id, reporter_id, reason, status) VALUES (?, ?, ?, 'spam', 'resolved')",
+      ).run(`old-report-${i}`, LISTING_ID, "reporter");
+    }
+    expect(await submitListingReport(db.d1, {
+      id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee", slug: "public-place", reporterId: "reporter",
+      reason: "wrong_information", details: "An additional report should be blocked.",
+    })).toBe(false);
   });
 
   it("does not return exact coordinates, address or storage keys in public extras", async () => {

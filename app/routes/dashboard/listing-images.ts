@@ -5,6 +5,7 @@ import { uuidParam } from "~/lib/validation/common";
 import { cloudflareContext } from "~/server/context.server";
 import { notFound } from "~/server/errors.server";
 import { removeImage, uploadListingImage } from "~/server/image-service.server";
+import { moveListingImage } from "~/server/db/repositories/images";
 import { requireUser } from "~/server/session.server";
 
 export interface ImageActionData {
@@ -42,8 +43,24 @@ export async function action({ params, context, request }: Route.ActionArgs) {
 
   const form = await request.formData();
   const deps = { db: env.DB, bucket: env.MEDIA_BUCKET };
+  const intent = form.get("intent");
 
-  if (form.get("intent") === "delete") {
+  if (intent === "move_up" || intent === "move_down") {
+    const imageId = uuidParam.safeParse(form.get("imageId"));
+    if (!imageId.success) return data<ImageActionData>({ ok: false, message: "This photo could not be found." }, { status: 404 });
+    const moved = await moveListingImage(env.DB, {
+      imageId: imageId.data,
+      listingId: listingId.data,
+      ownerId: user.id,
+      direction: intent === "move_up" ? "up" : "down",
+    });
+    if (!moved) {
+      return data<ImageActionData>({ ok: false, message: "The photo order could not be changed. Refresh and try again." }, { status: 409 });
+    }
+    return data<ImageActionData>({ ok: true, message: "Photo order updated." });
+  }
+
+  if (intent === "delete") {
     const imageId = uuidParam.safeParse(form.get("imageId"));
     if (!imageId.success) return data<ImageActionData>({ ok: false, message: "This photo could not be found." }, { status: 404 });
     const removed = await removeImage(deps, user.id, listingId.data, imageId.data);

@@ -2,6 +2,7 @@ import { RouterContextProvider } from "react-router";
 import { describe, expect, it } from "vitest";
 import { currentUserContext } from "~/server/context.server";
 import { requireAdmin, requireUser } from "~/server/session.server";
+import { originCheckMiddleware } from "~/server/middleware.server";
 import { createTestDatabase, insertUser } from "./helpers/sqlite-d1";
 
 function contextFor(user: { id: string; name: string; email: string } | null): RouterContextProvider {
@@ -70,5 +71,36 @@ describe("requireAdmin", () => {
     db.raw.prepare("INSERT INTO admin_users (user_id, role) VALUES ('boss', 'moderator')").run();
     const result = await requireAdmin(contextFor({ id: "boss", name: "B", email: "b@x.test" }), request("/admin"), db.d1);
     expect(result.role).toBe("moderator");
+  });
+});
+
+
+describe("originCheckMiddleware (state-changing request CSRF defense)", () => {
+  async function invoke(method: string, headers: Record<string, string> = {}) {
+    const request = new Request("https://thakbo.test/api/auth/sign-out", { method, headers });
+    return await originCheckMiddleware({ request } as never, async () => new Response("ok"));
+  }
+
+  it("allows a same-origin state-changing request", async () => {
+    const response = await invoke("POST", { origin: "https://thakbo.test" });
+    expect(response.status).toBe(200);
+  });
+
+  it("rejects a cross-origin state-changing request", async () => {
+    await expect(invoke("POST", { origin: "https://attacker.test" })).rejects.toBeDefined();
+  });
+
+  it("rejects explicitly cross-site requests even when Origin is absent", async () => {
+    await expect(invoke("POST", { "sec-fetch-site": "cross-site" })).rejects.toBeDefined();
+  });
+
+  it("keeps origin-less non-browser clients compatible", async () => {
+    const response = await invoke("POST");
+    expect(response.status).toBe(200);
+  });
+
+  it("does not block safe methods because of a foreign Origin", async () => {
+    const response = await invoke("GET", { origin: "https://attacker.test" });
+    expect(response.status).toBe(200);
   });
 });

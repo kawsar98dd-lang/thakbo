@@ -308,14 +308,22 @@ export interface SitemapLocation {
   areaSlug: string | null;
 }
 
-/** Every active city (areaSlug = null) and active area, for sitemap.xml. */
+/**
+ * Active cities and areas with at least one published listing, for sitemap.xml.
+ * Empty location pages are excluded to avoid indexing thin pages with no accommodation results.
+ */
 export function listSitemapLocations(db: D1Database): Promise<SitemapLocation[]> {
   return queryAll<SitemapLocation>(
     db,
-    `SELECT c.slug AS citySlug, NULL AS areaSlug FROM cities c ${ACTIVE_CHAIN_JOINS} WHERE c.is_active = 1
-     UNION ALL
-     SELECT c.slug AS citySlug, a.slug AS areaSlug FROM areas a JOIN cities c ON c.id = a.city_id ${ACTIVE_CHAIN_JOINS}
-     WHERE a.is_active = 1 AND c.is_active = 1`,
+    `SELECT c.slug AS citySlug, NULL AS areaSlug
+     FROM cities c ${ACTIVE_CHAIN_JOINS}
+     WHERE c.is_active = 1
+       AND EXISTS (SELECT 1 FROM listings l WHERE l.city_id = c.id AND l.status = 'published')
+     UNION
+     SELECT c.slug AS citySlug, a.slug AS areaSlug
+     FROM areas a JOIN cities c ON c.id = a.city_id ${ACTIVE_CHAIN_JOINS}
+     WHERE a.is_active = 1 AND c.is_active = 1
+       AND EXISTS (SELECT 1 FROM listings l WHERE l.area_id = a.id AND l.status = 'published')`,
   );
 }
 

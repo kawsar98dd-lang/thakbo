@@ -6,6 +6,9 @@ export interface PageMeta {
   description: string;
   /** Pages that must not appear in search engines (accounts, search filters, admin). */
   noindex?: boolean;
+  /** Absolute, public image URL for social sharing. Omit when no suitable image exists. */
+  image?: string;
+  imageAlt?: string;
 }
 
 export function formatTitle(title: string): string {
@@ -13,7 +16,7 @@ export function formatTitle(title: string): string {
 }
 
 /** Builds title/description/Open Graph tags. The canonical URL is added once, in root.tsx. */
-export function buildMeta({ title, description, noindex = false }: PageMeta): MetaDescriptor[] {
+export function buildMeta({ title, description, noindex = false, image, imageAlt }: PageMeta): MetaDescriptor[] {
   const fullTitle = formatTitle(title);
   const tags: MetaDescriptor[] = [
     { title: fullTitle },
@@ -22,8 +25,13 @@ export function buildMeta({ title, description, noindex = false }: PageMeta): Me
     { property: "og:description", content: description },
     { property: "og:type", content: "website" },
     { property: "og:site_name", content: SITE.name },
-    { name: "twitter:card", content: "summary" },
+    { name: "twitter:card", content: image ? "summary_large_image" : "summary" },
   ];
+  if (image) {
+    tags.push({ property: "og:image", content: image });
+    tags.push({ name: "twitter:image", content: image });
+    if (imageAlt) tags.push({ property: "og:image:alt", content: imageAlt });
+  }
   if (noindex) tags.push({ name: "robots", content: "noindex, follow" });
   return tags;
 }

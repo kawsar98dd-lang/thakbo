@@ -23,6 +23,14 @@ export async function isListingFavorite(db: D1Database, userId: string, slug: st
   return row !== null;
 }
 
+/** Server-side ownership check used to avoid showing a non-functional Save button on the owner's own public listing. */
+export async function isPublishedListingOwner(db: D1Database, userId: string, slug: string): Promise<boolean> {
+  const row = await queryFirst<{ found: number }>(db,
+    `SELECT 1 AS found FROM listings l
+     WHERE l.owner_id = ? AND l.slug = ? AND l.status = 'published'`, [userId, slug]);
+  return row !== null;
+}
+
 /** Atomically toggles a published listing favorite; the listing owner cannot save their own listing. */
 export async function toggleListingFavorite(db: D1Database, userId: string, slug: string): Promise<boolean> {
   const existing = await queryFirst<{ listingId: string }>(db,
@@ -76,7 +84,10 @@ export async function submitListingReport(db: D1Database, input: {
     `INSERT INTO reports (id, listing_id, reporter_id, reason, details)
      SELECT ?, l.id, ?, ?, ? FROM listings l
      WHERE l.slug = ? AND l.status = 'published' AND l.owner_id <> ?
-       AND NOT EXISTS (SELECT 1 FROM reports r WHERE r.listing_id = l.id AND r.reporter_id = ? AND r.status = 'pending')`,
-    [input.id, input.reporterId, input.reason, input.details, input.slug, input.reporterId, input.reporterId]);
+       AND NOT EXISTS (SELECT 1 FROM reports r WHERE r.listing_id = l.id AND r.reporter_id = ? AND r.status = 'pending')
+       AND (SELECT COUNT(*) FROM reports recent
+            WHERE recent.reporter_id = ?
+              AND recent.created_at >= strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-1 day')) < 10`,
+    [input.id, input.reporterId, input.reason, input.details, input.slug, input.reporterId, input.reporterId, input.reporterId]);
   return result.meta.changes > 0;
 }

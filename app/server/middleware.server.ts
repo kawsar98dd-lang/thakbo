@@ -12,7 +12,13 @@ const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 export const originCheckMiddleware: MiddlewareFunction<Response> = ({ request }, next) => {
   if (!SAFE_METHODS.has(request.method)) {
     const origin = request.headers.get("origin");
+    const fetchSite = request.headers.get("sec-fetch-site")?.toLowerCase();
+
+    // Browsers normally send Origin for state-changing requests. If it is absent, still reject
+    // requests explicitly marked as cross-site by Fetch Metadata. Keep origin-less non-browser
+    // clients compatible; SameSite cookies and the route's own authorization remain in force.
     if (origin && origin !== new URL(request.url).origin) throw forbidden();
+    if (!origin && fetchSite === "cross-site") throw forbidden();
   }
   return next();
 };

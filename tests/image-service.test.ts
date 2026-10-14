@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MEDIA_LIMITS } from "~/lib/constants";
-import { listListingImages } from "~/server/db/repositories/images";
+import { listListingImages, moveListingImage } from "~/server/db/repositories/images";
 import { getImageForServing, removeImage, resolveImageAccess, uploadListingImage } from "~/server/image-service.server";
 import { ADMIN_ID, JPEG_BYTES, PNG_BYTES, WEBP_BYTES, addImage, fakeBucket, insertAdmin, makeComplete, walkToStatus } from "./helpers/listings";
 import { createTestDatabase, insertUser, type TestDatabase } from "./helpers/sqlite-d1";
@@ -104,6 +104,35 @@ describe("storage failures", () => {
     expect(await removeImage(deps, "owner", L, uploaded.imageId)).toMatchObject({ ok: true });
     expect(rowCount(db)).toBe(0);
     expect(bucket.objects.size).toBe(1);
+  });
+});
+
+describe("reordering", () => {
+  it("moves a photo up or down and keeps the visible order contiguous", async () => {
+    const { db } = setup();
+    const first = addImage(db, L);
+    const second = addImage(db, L);
+    const third = addImage(db, L);
+
+    expect(await moveListingImage(db.d1, { imageId: third, listingId: L, ownerId: "owner", direction: "up" })).toBe(true);
+    expect((await listListingImages(db.d1, L)).map((image) => image.id)).toEqual([first, third, second]);
+    expect((await listListingImages(db.d1, L)).map((image) => image.sortOrder)).toEqual([0, 1, 2]);
+
+    expect(await moveListingImage(db.d1, { imageId: third, listingId: L, ownerId: "owner", direction: "down" })).toBe(true);
+    expect((await listListingImages(db.d1, L)).map((image) => image.id)).toEqual([first, second, third]);
+  });
+
+  it("refuses boundary moves, another owner's listing, and non-editable listing statuses", async () => {
+    const { db } = setup();
+    const first = addImage(db, L);
+    const second = addImage(db, L);
+    expect(await moveListingImage(db.d1, { imageId: first, listingId: L, ownerId: "owner", direction: "up" })).toBe(false);
+    expect(await moveListingImage(db.d1, { imageId: second, listingId: L, ownerId: "other", direction: "up" })).toBe(false);
+
+    makeComplete(db, L);
+    walkToStatus(db, L, "pending");
+    expect(await moveListingImage(db.d1, { imageId: second, listingId: L, ownerId: "owner", direction: "up" })).toBe(false);
+    expect((await listListingImages(db.d1, L)).map((image) => image.id)).toEqual([first, second]);
   });
 });
 

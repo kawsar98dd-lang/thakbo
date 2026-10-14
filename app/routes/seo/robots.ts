@@ -1,15 +1,11 @@
-import type { Route } from "./+types/robots";
+import { SITE } from "~/lib/constants";
 
-export function loader({ request }: Route.LoaderArgs) {
-  const origin = new URL(request.url).origin;
+export function loader() {
+  const origin = SITE.canonicalOrigin;
   const body = [
     "User-agent: *",
     "Allow: /",
-    "Disallow: /dashboard",
-    "Disallow: /admin",
     "Disallow: /api/",
-    "Disallow: /login",
-    "Disallow: /register",
     "",
     `Sitemap: ${origin}/sitemap.xml`,
     "",

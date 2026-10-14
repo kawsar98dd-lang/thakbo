@@ -25,6 +25,58 @@ export async function countListingImages(db: D1Database, listingId: string): Pro
 }
 
 /**
+ * Moves one photo by one position for its owner. The write is a single SQL statement and re-checks
+ * listing ownership/status, plus the expected image set, so a stale form cannot partially reorder photos.
+ * Sort positions are normalized to 0..n-1 while preserving the current visible order.
+ */
+export async function moveListingImage(
+  db: D1Database,
+  input: { imageId: string; listingId: string; ownerId: string; direction: "up" | "down" },
+): Promise<boolean> {
+  const images = await listListingImages(db, input.listingId);
+  const index = images.findIndex((image) => image.id === input.imageId);
+  if (index < 0) return false;
+  const neighborIndex = input.direction === "up" ? index - 1 : index + 1;
+  if (neighborIndex < 0 || neighborIndex >= images.length) return false;
+
+  const reordered = [...images];
+  [reordered[index], reordered[neighborIndex]] = [reordered[neighborIndex], reordered[index]];
+  const caseSql = reordered.map(() => "WHEN ? THEN ?").join(" ");
+  const idsSql = reordered.map(() => "?").join(", ");
+  const params: SqlValue[] = [];
+  for (let position = 0; position < reordered.length; position += 1) {
+    params.push(reordered[position].id, position);
+  }
+  params.push(
+    input.listingId,
+    ...reordered.map((image) => image.id),
+    input.listingId,
+    reordered.length,
+    input.listingId,
+    ...reordered.map((image) => image.id),
+    reordered.length,
+    input.listingId,
+    input.ownerId,
+    ...IMAGE_EDITABLE_STATUSES,
+  );
+
+  const result = await execute(
+    db,
+    `UPDATE listing_images
+     SET sort_order = CASE id ${caseSql} ELSE sort_order END
+     WHERE listing_id = ? AND id IN (${idsSql})
+       AND (SELECT COUNT(*) FROM listing_images WHERE listing_id = ?) = ?
+       AND (SELECT COUNT(*) FROM listing_images WHERE listing_id = ? AND id IN (${idsSql})) = ?
+       AND EXISTS (
+         SELECT 1 FROM listings l
+         WHERE l.id = ? AND l.owner_id = ? AND l.status IN (${editableList})
+       )`,
+    params,
+  );
+  return result.meta.changes === reordered.length;
+}
+
+/**
  * Registers an uploaded object. One statement checks ownership, an editable status AND the per-listing limit,
  * so two simultaneous uploads cannot exceed the limit. Returns false when any of those checks fails.
  */

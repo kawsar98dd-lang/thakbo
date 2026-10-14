@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { pageFromRequestUrl, safeRedirectPath } from "~/lib/routes";
+import { SITE } from "~/lib/constants";
 import { buildMeta, canonicalUrl } from "~/lib/seo";
 import { slugify, uniqueSlug } from "~/lib/utils";
+import { loader as robotsLoader } from "~/routes/seo/robots";
+import { serializeJsonLd } from "~/components/seo/Breadcrumbs";
 
 describe("safeRedirectPath", () => {
   it("allows local paths", () => expect(safeRedirectPath("/dashboard/listings")).toBe("/dashboard/listings"));
@@ -20,9 +23,37 @@ describe("pageFromRequestUrl", () => {
 });
 
 describe("seo", () => {
+  it("uses one configured production origin for canonical URLs", () => {
+    expect(SITE.canonicalOrigin).toBe("https://thakbo.kawsar98dd.workers.dev");
+    expect(canonicalUrl(SITE.canonicalOrigin, "/city/rajshahi")).toBe("https://thakbo.kawsar98dd.workers.dev/city/rajshahi");
+  });
   it("canonical URL drops the query string and trailing slash", () => {
     expect(canonicalUrl("https://x.test", "/search/")).toBe("https://x.test/search");
     expect(canonicalUrl("https://x.test", "/")).toBe("https://x.test/");
+  });
+  it("lets crawlers reach noindex account pages and advertises the canonical sitemap", async () => {
+    const response = robotsLoader();
+    const body = await response.text();
+    expect(body).toContain(`Sitemap: ${SITE.canonicalOrigin}/sitemap.xml`);
+    expect(body).toContain("Disallow: /api/");
+    expect(body).not.toContain("Disallow: /dashboard");
+    expect(body).not.toContain("Disallow: /admin");
+    expect(body).not.toContain("Disallow: /login");
+    expect(body).not.toContain("Disallow: /register");
+  });
+  it("adds social image metadata only when a public image is supplied", () => {
+    const withoutImage = buildMeta({ title: "T", description: "D" });
+    expect(withoutImage.some((tag) => "property" in tag && tag.property === "og:image")).toBe(false);
+    const withImage = buildMeta({ title: "T", description: "D", image: "https://example.test/photo.webp", imageAlt: "Room photo" });
+    expect(withImage).toContainEqual({ property: "og:image", content: "https://example.test/photo.webp" });
+    expect(withImage).toContainEqual({ name: "twitter:card", content: "summary_large_image" });
+    expect(withImage).toContainEqual({ property: "og:image:alt", content: "Room photo" });
+  });
+  it("serializes JSON-LD safely for HTML script context", () => {
+    const result = serializeJsonLd({ name: "</script><script>alert(1)</script>", separator: "A & B" });
+    expect(result).not.toContain("</script>");
+    expect(result).toContain("\\u003c/script\\u003e");
+    expect(result).toContain("A \\u0026 B");
   });
   it("adds noindex only when requested", () => {
     const names = (noindex: boolean) =>
