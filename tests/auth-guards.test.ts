@@ -76,9 +76,17 @@ describe("requireAdmin", () => {
 
 
 describe("originCheckMiddleware (state-changing request CSRF defense)", () => {
-  async function invoke(method: string, headers: Record<string, string> = {}) {
+  async function invoke(method: string, headers: Record<string, string> = {}): Promise<Response> {
     const request = new Request("https://thakbo.test/api/auth/sign-out", { method, headers });
-    return await originCheckMiddleware({ request } as never, async () => new Response("ok"));
+    const result = await originCheckMiddleware({ request } as never, async () => new Response("ok"));
+
+    // React Router's MiddlewareFunction type permits `void | Response` even when
+    // this test's `next` callback always returns a Response. Narrow the value
+    // explicitly so the assertions match the runtime contract.
+    if (!(result instanceof Response)) {
+      throw new Error("Expected originCheckMiddleware to return a Response");
+    }
+    return result;
   }
 
   it("allows a same-origin state-changing request", async () => {
