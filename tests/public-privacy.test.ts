@@ -29,7 +29,7 @@ describe("anonymous responses never contain private data", () => {
     const json = JSON.stringify(result);
     for (const secret of FORBIDDEN) expect(json).not.toContain(secret);
     expect(Object.keys(result.items[0] ?? {}).sort()).toEqual(
-      ["areaName", "areaSlug", "availabilityStatus", "citySlug", "cityName", "coverImageId", "mealCost", "electricityCost", "otherMonthlyCost", "propertyType", "rentAmount", "slug", "title", "updatedAt", "wifiCost"].sort(),
+      ["approximateDistanceKm", "areaName", "areaSlug", "availabilityStatus", "citySlug", "cityName", "coverImageId", "mealCost", "electricityCost", "otherMonthlyCost", "propertyType", "rentAmount", "slug", "title", "updatedAt", "wifiCost"].sort(),
     );
   });
 
