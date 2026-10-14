@@ -55,12 +55,20 @@ describe("anonymous responses never contain private data", () => {
 });
 
 describe("non-public listings are invisible to anonymous queries", () => {
-  it("pending, rejected, paused and draft listings never appear", async () => {
-    for (const status of ["draft", "pending", "rejected", "paused"]) {
+  it("draft, pending, rejected, paused and deleted listings never appear", async () => {
+    for (const status of ["draft", "pending", "rejected", "paused", "deleted"]) {
       const { db } = setup(status);
       expect((await searchListings(db.d1, parseSearchParams(new URLSearchParams("")))).items).toEqual([]);
       expect(await getPublishedListingBySlug(db.d1, "secret-test")).toBeNull();
     }
+  });
+
+  it("a soft-deleted listing remains invisible even when its slug is known", async () => {
+    const { db } = setup("published");
+    db.raw.prepare("UPDATE listings SET status = 'deleted' WHERE id = ?").run(L);
+    expect((await searchListings(db.d1, parseSearchParams(new URLSearchParams("")))).items).toEqual([]);
+    expect(await getPublishedListingBySlug(db.d1, "secret-test")).toBeNull();
+    expect((db.raw.prepare("SELECT status FROM listings WHERE id = ?").get(L) as { status: string }).status).toBe("deleted");
   });
 
   it("a live listing disappears from public queries as soon as it goes back to review", async () => {

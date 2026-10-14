@@ -42,7 +42,7 @@ describe("admin console repository", () => {
 
   it("returns zero-safe overview counts for a fresh database", async () => {
     const db = createTestDatabase();
-    expect(await getAdminOverview(db.d1)).toEqual({ users: 0, published: 0, pending: 0, totalListings: 0, pendingReports: 0 });
+    expect(await getAdminOverview(db.d1)).toEqual({ users: 0, published: 0, pending: 0, totalListings: 0, pendingReports: 0, openContactMessages: 0 });
   });
 });
 

@@ -22,6 +22,7 @@ export const PATHS = {
   adminUsers: "/admin/users",
   adminListings: "/admin/listings",
   adminReports: "/admin/reports",
+  adminContactMessages: "/admin/contact-messages",
   adminLocations: "/admin/locations",
   adminCities: "/admin/cities",
   adminFacilities: "/admin/facilities",

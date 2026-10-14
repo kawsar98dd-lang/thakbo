@@ -81,7 +81,7 @@ export function ImageManager({ listingId, images, editable, error }: ImageManage
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {images.map((image, index) => (
             <li key={image.id} className="space-y-1">
-              <img src={listingImagePath(image.id)} alt={`Listing photo ${index + 1}`} loading="lazy" className="aspect-[4/3] w-full rounded-lg border border-slate-200 object-cover" />
+              <img src={listingImagePath(image.id)} alt={`Listing photo ${index + 1}`} loading="lazy" decoding="async" className="aspect-[4/3] w-full rounded-lg border border-slate-200 object-cover" />
               {editable ? (
                 <div className="flex flex-wrap items-center gap-1">
                   <MoveButton listingId={listingId} imageId={image.id} direction="up" disabled={index === 0} />

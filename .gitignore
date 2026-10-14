@@ -34,3 +34,7 @@ Thumbs.db
 
 # temporary wrangler config written by the production D1 workflow (never commit)
 .production-d1.wrangler.json
+
+# Python tooling artifacts
+__pycache__/
+*.py[cod]

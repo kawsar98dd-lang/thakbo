@@ -18,7 +18,7 @@ describe("migrations", () => {
     const db = createTestDatabase();
     expect(db.raw.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
     const tables = (db.raw.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as Array<{ name: string }>).map((t) => t.name);
-    for (const expected of ["user", "profiles", "countries", "divisions", "districts", "cities", "areas", "area_aliases", "facilities", "listings", "listing_facilities", "listing_audiences", "favorites", "reports", "admin_users"]) {
+    for (const expected of ["user", "profiles", "countries", "divisions", "districts", "cities", "areas", "area_aliases", "facilities", "listings", "listing_facilities", "listing_audiences", "favorites", "reports", "contact_messages", "admin_users"]) {
       expect(tables).toContain(expected);
     }
   });
@@ -46,6 +46,17 @@ describe("migrations", () => {
       name: "Talaimari", name_en: "Talaimari", area_type: "neighborhood", is_active: 1, search_priority: 0,
     });
     expect(db.raw.prepare("SELECT name_en FROM cities").get()).toMatchObject({ name_en: "Rajshahi" });
+  });
+});
+
+describe("contact message constraints", () => {
+  it("stores valid contact messages and rejects invalid status or oversized content", () => {
+    const db = createTestDatabase();
+    db.raw.prepare("INSERT INTO contact_messages (id, name, email, subject, message) VALUES (?, ?, ?, ?, ?)")
+      .run("cm1", "Sam Example", "sam@example.com", "Question", "I would like to ask about a listing.");
+    expect(db.raw.prepare("SELECT status FROM contact_messages WHERE id = 'cm1'").get()).toMatchObject({ status: "open" });
+    expect(rejection(db, "UPDATE contact_messages SET status = 'deleted' WHERE id = 'cm1'")).toContain("CHECK");
+    expect(rejection(db, "INSERT INTO contact_messages (id, name, email, subject, message) VALUES ('cm2', 'X', 'x@y.z', 'Hi', 'Too short')")).toContain("CHECK");
   });
 });
 

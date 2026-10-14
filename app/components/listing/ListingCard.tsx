@@ -18,7 +18,7 @@ export function ListingCard({ listing }: { listing: ListingCardData }) {
   return (
     <Card className="p-0 sm:p-0">
       <Link to={listingPath(listing.slug)} className="block space-y-2 p-0 hover:bg-slate-50">
-        {listing.coverImageId ? <img src={listingImagePath(listing.coverImageId)} alt={`Photo of ${listing.title}`} loading="lazy" className="aspect-[16/10] w-full rounded-t-xl bg-slate-100 object-cover" /> : <div className="flex aspect-[16/10] items-center justify-center rounded-t-xl bg-slate-100 text-sm text-slate-500">No photo</div>}
+        {listing.coverImageId ? <img src={listingImagePath(listing.coverImageId)} alt={`Photo of ${listing.title}`} loading="lazy" decoding="async" className="aspect-[16/10] w-full rounded-t-xl bg-slate-100 object-cover" /> : <div className="flex aspect-[16/10] items-center justify-center rounded-t-xl bg-slate-100 text-sm text-slate-500">No photo</div>}
         <div className="space-y-2 p-4">
         <div className="flex flex-wrap gap-2">
           <Badge tone="brand">{PROPERTY_TYPE_LABELS[listing.propertyType]}</Badge>

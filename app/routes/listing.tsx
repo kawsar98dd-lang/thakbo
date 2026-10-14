@@ -5,6 +5,7 @@ import { Badge } from "~/components/ui/Badge";
 import { Button } from "~/components/ui/Button";
 import { Card } from "~/components/ui/Card";
 import { Breadcrumbs } from "~/components/seo/Breadcrumbs";
+import { ShareListingButton } from "~/components/listing/ShareListingButton";
 import { Alert } from "~/components/ui/Alert";
 import { AVAILABILITY_LABELS, AUDIENCE_LABELS, PROPERTY_TYPE_LABELS, REPORT_REASONS, SITE, type ReportReason } from "~/lib/constants";
 import { estimateMonthlyCost, formatTaka } from "~/lib/cost";
@@ -99,22 +100,25 @@ export default function ListingPage({ loaderData, actionData }: Route.ComponentP
         { label: listing.title },
       ]} />
       <PageHeader title={listing.title} description={`${listing.areaName}, ${listing.cityName}`} actions={
-        signedIn && isOwner ? (
-          <span className="inline-flex min-h-11 items-center rounded-lg bg-slate-100 px-4 text-sm font-semibold text-slate-600">Your listing</span>
-        ) : signedIn ? (
-          <Form method="post"><input type="hidden" name="intent" value="favorite" />
-            <Button type="submit" variant={favorite ? "secondary" : "primary"}>{favorite ? "♥ Saved" : "♡ Save place"}</Button>
-          </Form>
-        ) : (
-          <Link className="inline-flex min-h-11 items-center rounded-lg border border-slate-300 px-4 font-semibold text-brand-800 underline" to={`${PATHS.login}?redirectTo=${encodeURIComponent(`/listing/${listing.slug}`)}`}>Sign in to save</Link>
-        )
+        <div className="flex flex-wrap items-start gap-2">
+          <ShareListingButton title={listing.title} />
+          {signedIn && isOwner ? (
+            <span className="inline-flex min-h-11 items-center rounded-lg bg-slate-100 px-4 text-sm font-semibold text-slate-600">Your listing</span>
+          ) : signedIn ? (
+            <Form method="post"><input type="hidden" name="intent" value="favorite" />
+              <Button type="submit" variant={favorite ? "secondary" : "primary"}>{favorite ? "♥ Saved" : "♡ Save place"}</Button>
+            </Form>
+          ) : (
+            <Link className="inline-flex min-h-11 items-center rounded-lg border border-slate-300 px-4 font-semibold text-brand-800 underline" to={`${PATHS.login}?redirectTo=${encodeURIComponent(`/listing/${listing.slug}`)}`}>Sign in to save</Link>
+          )}
+        </div>
       } />
       <div className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
         <div className="space-y-5">
           <Card className="space-y-4">
             {extras.images.length ? <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {extras.images.map((photo, index) => <a key={photo.id} href={listingImagePath(photo.id)} target="_blank" rel="noreferrer" className={index === 0 ? "col-span-2 sm:col-span-2" : ""}>
-                <img src={listingImagePath(photo.id)} alt={photo.altText || `${listing.title} photo ${index + 1}`} loading={index > 1 ? "lazy" : "eager"} className={`w-full rounded-lg bg-slate-100 object-cover ${index === 0 ? "aspect-[16/10]" : "aspect-[4/3]"}`} />
+                <img src={listingImagePath(photo.id)} alt={photo.altText || `${listing.title} photo ${index + 1}`} loading={index > 1 ? "lazy" : "eager"} decoding="async" fetchPriority={index === 0 ? "high" : "auto"} className={`w-full rounded-lg bg-slate-100 object-cover ${index === 0 ? "aspect-[16/10]" : "aspect-[4/3]"}`} />
               </a>)}
             </div> : <div className="flex aspect-[16/7] items-center justify-center rounded-lg bg-slate-100 text-slate-500">No photos added yet</div>}
             <div className="flex flex-wrap gap-2">

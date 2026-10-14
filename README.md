@@ -182,7 +182,7 @@ The workflow **THAKBO Initialize Production D1** (`.github/workflows/initialize-
 ### What it does, in order
 1. **Safety checks** — only on `main`; for `apply` you must type `THAKBO-DB`; both GitHub secrets must exist.
 2. **Self-test** of the tooling (offline, fake wrangler on real SQLite).
-3. **Preflight** — checks the 9 migration files are in the required order (0000 … 0008) and that no migration/seed contains destructive SQL (the only `DROP` allowed is the audience-table rebuild in 0007, which copies every row first); finds the **one existing** database named `thakbo-db` (by name, through the Cloudflare API) and reads its migration state. If the name is missing or ambiguous it stops. It does not edit `wrangler.jsonc`: the database id is written to a temporary config that is deleted at the end and never committed.
+3. **Preflight** — checks the 10 migration files are in the required order (0000 … 0009) and that no migration/seed contains destructive SQL (the only `DROP` allowed is the audience-table rebuild in 0007, which copies every row first); finds the **one existing** database named `thakbo-db` (by name, through the Cloudflare API) and reads its migration state. If the name is missing or ambiguous it stops. It does not edit `wrangler.jsonc`: the database id is written to a temporary config that is deleted at the end and never committed.
 4. **Migrate** — `wrangler d1 migrations apply thakbo-db --remote`. Wrangler records every applied file in the table `d1_migrations` (set explicitly in the temporary config), so applied files are skipped on re-runs. If something fails part-way the workflow stops: **no seeding, no verification**.
 5. **Seed** — `db/seeds/0001_reference_data.sql`, then `db/seeds/0002_neighborhoods_and_facilities.sql` (unchanged files, idempotent), only after all migrations succeeded. Re-running re-applies the seed-managed names/labels of the seeded places and facilities; rows you add yourself are untouched.
 6. **Verify** — the run fails unless everything below is true.
@@ -203,7 +203,7 @@ It refuses to continue (and changes nothing) when the database **already has tab
 ### Expected verification results (fresh database, after `apply`)
 | Check | Expected |
 |---|---|
-| Migrations recorded | `9/9` in the order 0000 … 0008 |
+| Migrations recorded | `9/9` in the order 0000 … 0008 (at the time of this historical report) |
 | Required tables | `21/21` (Better Auth: user, session, account, verification, rateLimit; THAKBO tables; `d1_migrations`) |
 | countries / divisions / districts / cities | `1/1/1/1` (Bangladesh, Rajshahi division, Rajshahi district, Rajshahi city with Bangla name) |
 | Rajshahi active areas | `10` (Hetem Khan, Ghoshpara, Shaheb Bazar, Talaimari, Kazla, Motihar, Binodpur, Upashahar, Laxmipur, Sopura) |
@@ -279,7 +279,7 @@ No secret is ever stored in Git. `.env.example` documents the names only. THAKBO
 2. **R2:** *R2 object storage → Create bucket* → name `thakbo-media` (R2 may ask for a payment method to enable its free tier — check Cloudflare's current terms).
 3. **Connect the Worker:** *Workers & Pages → Create → Import a repository* → choose your GitHub repo. Build command `npm run build`, deploy command `npx wrangler deploy`.
 4. **Bind the database:** For predictable migrations and remote database operations, create/identify `thakbo-db` and add its real `database_id` to the `d1_databases` entry using GitHub's web editor. Wrangler also supports automatic resource provisioning in supported deploy flows, so a missing production ID is not by itself proof that a deploy must fail; the actual authenticated Cloudflare build result is decisive. Do not guess an ID.
-5. **Create the tables:** use the repository's documented GitHub Actions workflow `THAKBO Initialize Production D1` in `check` mode first. Do not paste only some migrations by hand; the project has migrations `0000` through `0008` and a guarded workflow that checks the existing database before applying them.
+5. **Create the tables:** use the repository's documented GitHub Actions workflow `THAKBO Initialize Production D1` in `check` mode first. Do not paste only some migrations by hand; the project has migrations `0000` through `0009` and a guarded workflow that checks the existing database before applying them.
 6. **Secret:** Worker → *Settings → Variables and Secrets → Add* → `BETTER_AUTH_SECRET` = a long random text (type "Secret").
 7. Open `https://<your-worker>/api/health` — expected `{"status":"ok","database":"ok"}`.
 
@@ -334,7 +334,7 @@ Server-side guards for `/dashboard/*` and `/admin/*` (admin role comes only from
 * Better Auth + D1 behaviour (D1 has no interactive transactions) has not been tested at runtime.
 * `app/server/*` repository files rely on React Router removing server-only imports from browser bundles; if the build reports a "server-only module" error, the developer assistant must rename those modules to `*.server.ts`.
 * Migration 0008 (triggers) has been verified only against SQLite, not against real Cloudflare D1. Radius search uses coordinates rounded to two decimal places before filtering/sorting to reduce exact-pin inference; this is still approximate location privacy, not a guarantee against all inference.
-* Password reset and e-mail verification are not enabled because they need an e-mail provider. The contact page remains informational; a submitted contact-message workflow is not implemented. An embedded interactive map with listing pins is not yet implemented.
+* Password reset and e-mail verification are not enabled because they need an e-mail provider. The contact form stores messages in the admin inbox but does not send email automatically. An embedded interactive map with listing pins is not yet implemented.
 * Fields from the MVP spec such as room/bathroom counts and an "account status" are not in the schema yet.
 
 ## Milestones
@@ -369,3 +369,7 @@ Validation for v13: SQL migration/seed verification and Python configuration tes
 
 ### Preview D1 binding (v17)
 The Preview-only D1 binding now uses the database ID supplied for `thakbo-preview`. Before deploying, confirm in the Cloudflare dashboard that this ID belongs to the intended Preview database, that `thakbo-media-preview` exists, and that required Preview secrets are configured. The local checker passing is not proof of a successful Cloudflare deployment.
+
+
+### Contact inbox (Phase 9)
+The public `/contact` page validates and stores messages in `contact_messages`. A hidden honeypot and a per-email 10-minute cooldown reduce simple bot and repeat submissions; these are lightweight safeguards, not comprehensive edge rate limiting. Admins can review messages at `/admin/contact-messages`, update status (`open`, `in_progress`, `closed`) and keep an internal note. The feature requires migration `0009_contact_messages.sql` to be applied to the target D1 database. It does not send email automatically and does not alter existing tables.

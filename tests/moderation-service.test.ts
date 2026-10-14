@@ -42,6 +42,19 @@ describe("who may decide", () => {
     expect(status(db)).toBe("pending");
   });
 
+  it("honors an admin or moderator role revocation on the next moderation attempt", async () => {
+    const db = setup();
+    db.raw.prepare("DELETE FROM admin_users WHERE user_id = ?").run(ADMIN_ID);
+
+    expect(await approveListing(db.d1, ADMIN_ID, L)).toMatchObject({ ok: false, kind: "forbidden" });
+    expect(status(db)).toBe("pending");
+    expect(db.raw.prepare("SELECT count(*) AS n FROM listing_moderation_events WHERE action IN ('approve','reject')").get()).toMatchObject({ n: 0 });
+
+    db.raw.prepare("DELETE FROM admin_users WHERE user_id = ?").run(MODERATOR_ID);
+    expect(await rejectListing(db.d1, MODERATOR_ID, L, "A valid rejection reason.")).toMatchObject({ ok: false, kind: "forbidden" });
+    expect(status(db)).toBe("pending");
+  });
+
   it("refuses self-approval and self-rejection even for an administrator", async () => {
     const db = setup();
     insertAdmin(db, "owner", "admin");
@@ -70,6 +83,21 @@ describe("rejecting", () => {
     expect(db.raw.prepare("SELECT status, rejection_reason AS r FROM listings WHERE id = ?").get(L)).toEqual({ status: "rejected", r: "The photos do not show the room." });
     const history = await listModerationEvents(db.d1, L);
     expect(history[0]).toMatchObject({ action: "reject", actorId: ADMIN_ID, actorRole: "admin", reason: "The photos do not show the room." });
+  });
+
+  it("returns moderation history newest-first and respects its limit", async () => {
+    const db = setup();
+    expect(await rejectListing(db.d1, ADMIN_ID, L, "The photos do not show the room.")).toMatchObject({ ok: true });
+    // Owner resubmits, creating a later event in the same listing history.
+    db.raw.prepare("UPDATE listings SET status = 'pending' WHERE id = ?").run(L);
+    const history = await listModerationEvents(db.d1, L);
+    expect(history.length).toBeGreaterThanOrEqual(2);
+    expect(history[0]).toMatchObject({ action: "submit", fromStatus: "rejected", toStatus: "pending" });
+    expect(history[1]).toMatchObject({ action: "reject", fromStatus: "pending", toStatus: "rejected" });
+    expect(await listModerationEvents(db.d1, L, 1)).toEqual([history[0]]);
+    // Negative SQLite LIMIT values mean “unlimited”; repositories must reject that footgun.
+    expect(await listModerationEvents(db.d1, L, -1)).toEqual([]);
+    expect(await listModerationEvents(db.d1, L, Number.NaN)).toHaveLength(2);
   });
 });
 
@@ -100,6 +128,24 @@ describe("moderator views", () => {
     expect((await listListingsForModeration(db.d1, "pending")).map((i) => i.id)).toEqual([L2, L]);
     expect(await listListingsForModeration(db.d1, "draft")).toEqual([]);
     expect(await listListingsForModeration(db.d1, "deleted")).toEqual([]);
+  });
+
+  it("rejects unsupported queue statuses and applies the requested result limit", async () => {
+    const db = setup();
+    walkToStatus(db, L2, "pending");
+    expect(await listListingsForModeration(db.d1, "draft")).toEqual([]);
+    expect(await listListingsForModeration(db.d1, "deleted")).toEqual([]);
+    expect(await listListingsForModeration(db.d1, "pending", 1)).toHaveLength(1);
+    expect(await listListingsForModeration(db.d1, "pending", 0)).toEqual([]);
+    expect(await listListingsForModeration(db.d1, "pending", -1)).toEqual([]);
+    expect(await listListingsForModeration(db.d1, "pending", Number.POSITIVE_INFINITY)).toHaveLength(2);
+  });
+
+  it("uses listing ID as a stable tie-breaker for submissions with the same timestamp", async () => {
+    const db = setup();
+    walkToStatus(db, L2, "pending");
+    db.raw.prepare("UPDATE listings SET submitted_at = '2026-01-01T00:00:00Z' WHERE id IN (?, ?)").run(L, L2);
+    expect((await listListingsForModeration(db.d1, "pending")).map((item) => item.id)).toEqual([L, L2]);
   });
 
   it("shows private review data to the moderator layer only (owner contact, address, coordinates)", async () => {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MEDIA_LIMITS } from "~/lib/constants";
+import { mimeFromKey } from "~/server/storage/media.server";
 import { listListingImages, moveListingImage } from "~/server/db/repositories/images";
 import { getImageForServing, removeImage, resolveImageAccess, uploadListingImage } from "~/server/image-service.server";
 import { ADMIN_ID, JPEG_BYTES, PNG_BYTES, WEBP_BYTES, addImage, fakeBucket, insertAdmin, makeComplete, walkToStatus } from "./helpers/listings";
@@ -96,6 +97,17 @@ describe("storage failures", () => {
     expect(rowCount(db)).toBe(0);
   });
 
+  it("leaves a traceable orphan when both the database insert and R2 compensation fail", async () => {
+    const { db, bucket, deps } = setup();
+    // D1 rejects the row after R2 succeeds, and the compensating R2 delete also fails.
+    db.raw.exec("CREATE TRIGGER fail_image BEFORE INSERT ON listing_images BEGIN SELECT RAISE(ABORT, 'simulated d1 failure'); END");
+    bucket.failDelete = true;
+    expect(await uploadListingImage(deps, "owner", L, JPEG_BYTES)).toMatchObject({ ok: false, kind: "storage_error" });
+    expect(rowCount(db)).toBe(0);
+    expect(bucket.objects.size).toBe(1);
+    expect([...bucket.objects.keys()][0]).toMatch(/^listings\/[0-9a-f-]+\/[0-9a-f-]+\.jpg$/);
+  });
+
   it("deletes the row first; a failing file delete only leaves an unreferenced file", async () => {
     const { db, bucket, deps } = setup();
     const uploaded = await uploadListingImage(deps, "owner", L, JPEG_BYTES);
@@ -122,6 +134,18 @@ describe("reordering", () => {
     expect((await listListingImages(db.d1, L)).map((image) => image.id)).toEqual([first, second, third]);
   });
 
+  it("does not reorder an image when the submitted image id belongs to a different listing", async () => {
+    const { db } = setup();
+    const first = addImage(db, L);
+    const secondListing = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+    db.raw.prepare("INSERT INTO listings (id, owner_id, slug, property_type) VALUES (?, 'owner', 'second', 'mess')").run(secondListing);
+    const foreignImage = addImage(db, secondListing);
+
+    expect(await moveListingImage(db.d1, { imageId: foreignImage, listingId: L, ownerId: "owner", direction: "down" })).toBe(false);
+    expect((await listListingImages(db.d1, L)).map((image) => image.id)).toEqual([first, second]);
+    expect((await listListingImages(db.d1, secondListing)).map((image) => image.id)).toEqual([foreignImage]);
+  });
+
   it("refuses boundary moves, another owner's listing, and non-editable listing statuses", async () => {
     const { db } = setup();
     const first = addImage(db, L);
@@ -137,6 +161,19 @@ describe("reordering", () => {
 });
 
 describe("deleting", () => {
+  it("cannot delete an image by pairing its id with another listing id", async () => {
+    const { db, bucket, deps } = setup();
+    const uploaded = await uploadListingImage(deps, "owner", L, JPEG_BYTES);
+    if (!uploaded.ok) throw new Error("setup failed");
+    const secondListing = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+    db.raw.prepare("INSERT INTO listings (id, owner_id, slug, property_type) VALUES (?, 'owner', 'second', 'mess')").run(secondListing);
+
+    expect(await removeImage(deps, "owner", secondListing, uploaded.imageId)).toMatchObject({ ok: false, kind: "not_found" });
+    expect(rowCount(db)).toBe(1);
+    expect(bucket.objects.size).toBe(1);
+    expect(await getImageForServing(db.d1, uploaded.imageId)).toMatchObject({ ownerId: "owner", listingStatus: "draft" });
+  });
+
   it("is owner-only and removes row and file", async () => {
     const { db, bucket, deps } = setup();
     const uploaded = await uploadListingImage(deps, "owner", L, JPEG_BYTES);
@@ -192,5 +229,65 @@ describe("who may see an image", () => {
     const image = await imageOf(db, "deleted");
     expect(await resolveImageAccess(db.d1, image, "owner")).toBe("deny");
     expect(await resolveImageAccess(db.d1, image, ADMIN_ID)).toBe("deny");
+  });
+
+  it("keeps image metadata and the R2 object after listing soft-delete, while denying image access", async () => {
+    const { db, bucket, deps } = setup();
+    const uploaded = await uploadListingImage(deps, "owner", L, JPEG_BYTES);
+    if (!uploaded.ok) throw new Error("setup failed");
+    const before = await getImageForServing(db.d1, uploaded.imageId);
+    if (!before) throw new Error("image metadata missing before soft-delete");
+    expect(bucket.objects.has(before.objectKey)).toBe(true);
+
+    walkToStatus(db, L, "deleted");
+
+    expect(await getImageForServing(db.d1, uploaded.imageId)).toMatchObject({ listingStatus: "deleted" });
+    expect(rowCount(db)).toBe(1);
+    expect(bucket.objects.has(before.objectKey)).toBe(true);
+    const after = await getImageForServing(db.d1, uploaded.imageId);
+    if (!after) throw new Error("image metadata missing after soft-delete");
+    expect(await resolveImageAccess(db.d1, after, null)).toBe("deny");
+    expect(await resolveImageAccess(db.d1, after, "owner")).toBe("deny");
+    expect(await resolveImageAccess(db.d1, after, ADMIN_ID)).toBe("deny");
+  });
+
+  it("revokes private review-image access immediately when a moderator role is removed", async () => {
+    const { db } = setup();
+    const image = await imageOf(db, "pending");
+    expect(await resolveImageAccess(db.d1, image, ADMIN_ID)).toBe("private");
+
+    db.raw.prepare("DELETE FROM admin_users WHERE user_id = ?").run(ADMIN_ID);
+
+    expect(await resolveImageAccess(db.d1, image, ADMIN_ID)).toBe("deny");
+    expect(await resolveImageAccess(db.d1, image, "owner")).toBe("private");
+    expect(await resolveImageAccess(db.d1, image, null)).toBe("deny");
+  });
+
+  it("does not grant review-image access to a regular user who is not in the moderator table", async () => {
+    const { db } = setup();
+    const image = await imageOf(db, "rejected");
+    expect(await resolveImageAccess(db.d1, image, "other")).toBe("deny");
+    expect(await resolveImageAccess(db.d1, image, ADMIN_ID)).toBe("private");
+  });
+});
+
+
+describe("stored object-key validation", () => {
+  it("recognizes only the generated listing UUID / image UUID layout", () => {
+    expect(mimeFromKey(`listings/${L}/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb.jpg`)).toBe("image/jpeg");
+    expect(mimeFromKey(`listings/${L}/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb.png`)).toBe("image/png");
+    expect(mimeFromKey(`listings/${L}/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb.webp`)).toBe("image/webp");
+  });
+
+  it.each([
+    "private/secret.jpg",
+    `listings/${L}/../../secret.jpg`,
+    `listings/${L}/not-a-uuid.jpg`,
+    `listings/${L}/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb.jpg/extra`,
+    `listings/${L}/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb.svg`,
+    `listings/${L.toUpperCase()}/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb.jpg`,
+    "listings//bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb.jpg",
+  ])("rejects unexpected key %s", (key) => {
+    expect(mimeFromKey(key)).toBeNull();
   });
 });

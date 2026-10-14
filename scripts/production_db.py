@@ -45,6 +45,8 @@ EXPECTED_MIGRATIONS = [
     "0006_neighborhood_locations.sql",
     "0007_facility_labels_and_audiences.sql",
     "0008_listing_moderation.sql",
+    "0009_contact_messages.sql",
+    "0010_moderation_audit_retention.sql",
 ]
 SEED_FILES = [
     "db/seeds/0001_reference_data.sql",
@@ -56,7 +58,8 @@ REQUIRED_TABLES = [
     "user", "session", "account", "verification", "rateLimit",
     # THAKBO
     "profiles", "admin_users", "countries", "divisions", "districts", "cities", "areas", "area_aliases",
-    "facilities", "listings", "listing_images", "listing_facilities", "listing_audiences", "favorites", "reports",
+    "facilities", "listings", "listing_images", "listing_facilities", "listing_audiences", "favorites", "reports", "contact_messages",
+    "listing_moderation_events",
     MIGRATIONS_TABLE,
 ]
 
@@ -418,6 +421,21 @@ def collect_problems(files: list[str]) -> tuple[list[str], list[str]]:
     if missing:
         problems.append(f"missing tables (Better Auth / THAKBO): {missing}")
         return problems, report  # the remaining queries would only produce noise
+
+    # Migration 0010 protects the moderation audit trail. Verify the live schema, not just
+    # the migration ledger: a manually altered/misapplied schema must not be called ready.
+    expected_triggers = {
+        "trg_listing_moderation_events_no_update",
+        "trg_listing_moderation_events_no_delete",
+        "trg_listings_audit_retention_guard",
+    }
+    installed_triggers = {row["name"] for row in query(
+        "SELECT name FROM sqlite_master WHERE type = 'trigger'"
+    )}
+    missing_triggers = sorted(expected_triggers - installed_triggers)
+    report.append(f"moderation audit-retention triggers: {len(expected_triggers) - len(missing_triggers)}/{len(expected_triggers)}")
+    if missing_triggers:
+        problems.append(f"missing moderation audit-retention triggers: {missing_triggers}")
 
     counts = query(
         "SELECT (SELECT count(*) FROM countries) AS countries, (SELECT count(*) FROM divisions) AS divisions, "

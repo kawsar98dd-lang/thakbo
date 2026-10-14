@@ -43,10 +43,14 @@ export async function deleteListingImage(bucket: R2Bucket, key: string): Promise
   await bucket.delete(key);
 }
 
-/** Content type for an object key we generated ourselves (extension is always one of ours). */
+/**
+ * Content type for a generated object key. Fail closed if a database row contains a key outside our
+ * exact layout; an allowed extension alone is not enough to trust an arbitrary R2 path.
+ */
 export function mimeFromKey(key: string): ImageMime | null {
-  if (key.endsWith(".jpg")) return "image/jpeg";
-  if (key.endsWith(".png")) return "image/png";
-  if (key.endsWith(".webp")) return "image/webp";
-  return null;
+  const match = /^listings\/([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})\/([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})\.(jpg|png|webp)$/.exec(key);
+  if (!match) return null;
+  if (match[3] === "jpg") return "image/jpeg";
+  if (match[3] === "png") return "image/png";
+  return "image/webp";
 }

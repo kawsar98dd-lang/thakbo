@@ -82,6 +82,17 @@ describe("status transitions enforced by the database", () => {
     expect(attempt(db, "UPDATE listings SET status = 'published', reviewed_by = 'mod-1' WHERE id = ?", L)).toBe("");
   });
 
+  it("refuses a decision when the reviewer role has been revoked", () => {
+    const db = setup();
+    walkToStatus(db, L, "pending");
+    insertAdmin(db, "revoked-reviewer", "moderator");
+    db.raw.prepare("DELETE FROM admin_users WHERE user_id = ?").run("revoked-reviewer");
+
+    expect(attempt(db, "UPDATE listings SET status = 'published', reviewed_by = ? WHERE id = ?", "revoked-reviewer", L)).toContain("different, registered reviewer");
+    expect((db.raw.prepare("SELECT status FROM listings WHERE id = ?").get(L) as { status: string }).status).toBe("pending");
+    expect(events(db).filter((event) => event.action === "approve")).toEqual([]);
+  });
+
   it("requires a 10-500 character reason for a rejection", () => {
     const db = setup();
     walkToStatus(db, L, "pending");
@@ -129,5 +140,53 @@ describe("moderation history", () => {
     db.raw.prepare("UPDATE listings SET title = 'Another title' WHERE id = ?").run(L);
     attempt(db, "UPDATE listings SET status = 'published' WHERE id = ?", L);
     expect(events(db)).toEqual([]);
+  });
+});
+
+describe("migration 0010 compatibility", () => {
+  it("preserves pre-existing listings and moderation events when applied after migration 0009", () => {
+    const db = createTestDatabase({ stopBefore: "0010", seed: false });
+    insertUser(db, "owner");
+    db.raw.prepare("INSERT INTO listings (id, owner_id, slug, property_type) VALUES (?, 'owner', 'before-retention', 'mess')").run(L);
+    makeComplete(db, L);
+    addImage(db, L);
+    walkToStatus(db, L, "pending");
+    const before = (db.raw.prepare("SELECT COUNT(*) AS count FROM listing_moderation_events WHERE listing_id = ?").get(L) as { count: number }).count;
+    expect(before).toBeGreaterThan(0);
+
+    applyMigration(db, "0010");
+
+    expect((db.raw.prepare("SELECT status FROM listings WHERE id = ?").get(L) as { status: string }).status).toBe("pending");
+    expect((db.raw.prepare("SELECT COUNT(*) AS count FROM listing_moderation_events WHERE listing_id = ?").get(L) as { count: number }).count).toBe(before);
+    expect(db.raw.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
+    const event = db.raw.prepare("SELECT id FROM listing_moderation_events WHERE listing_id = ? LIMIT 1").get(L) as { id: string };
+    expect(attempt(db, "UPDATE listing_moderation_events SET reason = 'changed' WHERE id = ?", event.id)).toContain("immutable");
+  });
+});
+
+describe("moderation audit retention migration 0010", () => {
+  it("rejects direct updates and deletes of moderation events", () => {
+    const db = setup();
+    addImage(db, L);
+    walkToStatus(db, L, "pending");
+    const event = db.raw.prepare("SELECT id FROM listing_moderation_events WHERE listing_id = ? LIMIT 1").get(L) as { id: string };
+
+    expect(attempt(db, "UPDATE listing_moderation_events SET reason = 'tampered' WHERE id = ?", event.id)).toContain("immutable");
+    expect(attempt(db, "DELETE FROM listing_moderation_events WHERE id = ?", event.id)).toContain("cannot be deleted");
+    expect(db.raw.prepare("SELECT COUNT(*) AS count FROM listing_moderation_events WHERE listing_id = ?").get(L)).toMatchObject({ count: 1 });
+  });
+
+  it("blocks physical listing deletion when audit history exists, while soft deletion retains history", () => {
+    const db = setup();
+    addImage(db, L);
+    walkToStatus(db, L, "pending");
+    const before = (db.raw.prepare("SELECT COUNT(*) AS count FROM listing_moderation_events WHERE listing_id = ?").get(L) as { count: number }).count;
+
+    expect(attempt(db, "DELETE FROM listings WHERE id = ?", L)).toContain("use deleted status");
+    expect((db.raw.prepare("SELECT status FROM listings WHERE id = ?").get(L) as { status: string }).status).toBe("pending");
+
+    db.raw.prepare("UPDATE listings SET status = 'draft' WHERE id = ?").run(L);
+    db.raw.prepare("UPDATE listings SET status = 'deleted' WHERE id = ?").run(L);
+    expect((db.raw.prepare("SELECT COUNT(*) AS count FROM listing_moderation_events WHERE listing_id = ?").get(L) as { count: number }).count).toBe(before + 2);
   });
 });

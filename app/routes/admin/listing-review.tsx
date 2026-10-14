@@ -135,7 +135,7 @@ export default function ReviewListing({ loaderData, actionData }: Route.Componen
           <h2 className="text-lg font-bold">Photos ({listing.imageIds.length})</h2>
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {listing.imageIds.map((imageId) => (
-              <li key={imageId}><img src={listingImagePath(imageId)} alt="Listing photo" loading="lazy" className="aspect-[4/3] w-full rounded-lg border border-slate-200 object-cover" /></li>
+              <li key={imageId}><img src={listingImagePath(imageId)} alt="Listing photo" loading="lazy" decoding="async" className="aspect-[4/3] w-full rounded-lg border border-slate-200 object-cover" /></li>
             ))}
           </ul>
         </Card>

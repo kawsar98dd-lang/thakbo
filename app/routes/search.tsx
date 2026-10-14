@@ -3,6 +3,7 @@ import type { Route } from "./+types/search";
 import { PageContainer, PageHeader } from "~/components/layout/PageContainer";
 import { ListingCard } from "~/components/listing/ListingCard";
 import { SearchFilters } from "~/components/search/SearchFilters";
+import { SearchAreaMap } from "~/components/search/SearchAreaMap";
 import { buttonClasses } from "~/components/ui/Button";
 import { EmptyState } from "~/components/ui/EmptyState";
 import { buildMeta } from "~/lib/seo";
@@ -70,9 +71,22 @@ export default function Search({ loaderData }: Route.ComponentProps) {
     <PageContainer>
       <PageHeader title="Search places" description="Filters are saved in the address bar, so you can share the link." />
       <SearchFilters cities={cities} facilities={facilities} values={search} areaInput={areaInput} areaSearchError={areaSearchError} />
+      <SearchAreaMap latitude={search.lat} longitude={search.lng} radiusKm={search.radiusKm} />
       <section aria-label="Results" className="mt-6">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-50 px-4 py-3">
+          <p role="status" aria-live="polite" className="text-sm font-medium text-slate-800">
+            {result.items.length === 0
+              ? "No matching places on this page."
+              : `${result.items.length} ${result.items.length === 1 ? "place" : "places"} shown${result.hasMore ? " · More results available" : " · End of results"}.`}
+          </p>
+          {result.items.length > 0 || search.page > 1 ? (
+            <Link className="text-sm font-semibold text-brand-800 underline" to={search.city ? `/search?city=${encodeURIComponent(search.city)}` : "/search"}>
+              Clear filters
+            </Link>
+          ) : null}
+        </div>
         {result.items.length === 0 ? (
-          <EmptyState title="No places found" description="Try a different city, a higher price or fewer filters." />
+          <EmptyState title="No places found" description="Try a different city or area, increase your budget, or remove some filters." />
         ) : (
           <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {result.items.map((listing) => (

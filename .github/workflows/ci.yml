@@ -23,6 +23,13 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      # Guard against stale CI command paths and missing verification scripts.
+      - name: Verify CI workflow consistency (no network)
+        run: python3 scripts/verify-ci-workflow.py
+
+      - name: Test CI workflow consistency checker (no network)
+        run: python3 scripts/verify-ci-workflow-test.py
+
       # Independent of npm: proves the SQL migrations and seed data are valid on a real SQLite engine.
       - name: Verify D1 migrations and seed data (SQLite)
         run: python3 scripts/verify-sql.py
@@ -31,9 +38,24 @@ jobs:
       - name: Report Cloudflare Preview readiness (read-only)
         run: python3 scripts/check-preview-config.py
 
+      # Read-only static audit of secret handling, Preview isolation, and production workflow safeguards.
+      - name: Audit repository security configuration (no network)
+        run: python3 scripts/check-security-config.py --strict
+
+      - name: Test repository security configuration checks (no network)
+        run: python3 scripts/check-security-config-test.py
+
       # Offline tests of the production-D1 tooling (fake wrangler on a real SQLite file). They never touch Cloudflare.
       - name: Test production D1 tooling (no network)
         run: python3 scripts/production_db_test.py
+
+      # These tests were added with the storage recovery tools. Keep them in CI so
+      # future edits cannot silently break the dry-run, queue, diagnostics, or readiness checks.
+      - name: Test Cloudflare Preview configuration checks (no network)
+        run: python3 scripts/check-preview-config-test.py
+
+      - name: Test R2 storage planning and recovery tools (no network)
+        run: python3 scripts/storage_tools_test.py
 
       - name: Set up Node.js
         uses: actions/setup-node@v4

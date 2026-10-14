@@ -46,6 +46,9 @@ export function Layout({ children }: { children: ReactNode }) {
         <meta name="theme-color" content="#1c655b" />
         {root ? <link rel="canonical" href={canonicalUrl(root.siteOrigin, pathname)} /> : null}
         {root ? <meta property="og:url" content={canonicalUrl(root.siteOrigin, pathname)} /> : null}
+        {/^(\/(?:dashboard|admin)(?:\/|$)|\/(?:login|register|forgot-password|reset-password)(?:\/|$))/.test(pathname) ? (
+          <meta name="robots" content="noindex, nofollow, noarchive" />
+        ) : null}
         <Meta />
         <Links />
       </head>

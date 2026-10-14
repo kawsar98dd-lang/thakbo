@@ -14,7 +14,15 @@ export async function getAdminOverview(db: D1Database) {
       (SELECT COUNT(*) FROM listings WHERE status = 'pending') AS pending,
       (SELECT COUNT(*) FROM listings WHERE status NOT IN ('deleted')) AS totalListings,
       (SELECT COUNT(*) FROM reports WHERE status = 'pending') AS pendingReports`);
-  return row ?? { users: 0, published: 0, pending: 0, totalListings: 0, pendingReports: 0 };
+  let openContactMessages = 0;
+  // Keep the existing admin dashboard usable while an additive migration is awaiting approval/application.
+  try {
+    const contactCount = await queryFirst<{ total: number }>(db, "SELECT COUNT(*) AS total FROM contact_messages WHERE status = 'open'");
+    openContactMessages = contactCount?.total ?? 0;
+  } catch {
+    openContactMessages = 0;
+  }
+  return { ...(row ?? { users: 0, published: 0, pending: 0, totalListings: 0, pendingReports: 0 }), openContactMessages };
 }
 
 export interface AdminUserRow { id: string; name: string; email: string; createdAt: string; displayName: string | null; role: string | null }

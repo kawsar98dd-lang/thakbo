@@ -2,6 +2,13 @@ import { REVIEWABLE_STATUSES, type Audience, type ListingStatus, type Moderation
 import { execute, queryAll, queryFirst } from "../client";
 
 const NOW = "strftime('%Y-%m-%dT%H:%M:%fZ', 'now')";
+const MAX_MODERATION_PAGE_SIZE = 100;
+
+/** Keep caller-provided LIMIT values finite and bounded; negative SQLite LIMITs mean no limit. */
+function normalizeModerationLimit(limit: number, fallback: number): number {
+  if (!Number.isFinite(limit)) return fallback;
+  return Math.min(MAX_MODERATION_PAGE_SIZE, Math.max(0, Math.floor(limit)));
+}
 
 export interface ListingOwnerStatus {
   id: string;
@@ -55,6 +62,8 @@ export interface ModerationQueueItem {
 /** Oldest submission first, so nobody waits forever. Only reviewable statuses; drafts and deleted listings never appear. */
 export function listListingsForModeration(db: D1Database, status: ListingStatus, limit: number = 100): Promise<ModerationQueueItem[]> {
   if (!REVIEWABLE_STATUSES.includes(status)) return Promise.resolve([]);
+  const safeLimit = normalizeModerationLimit(limit, 100);
+  if (safeLimit === 0) return Promise.resolve([]);
   return queryAll<ModerationQueueItem>(
     db,
     `SELECT l.id, l.title, l.property_type AS propertyType, l.status, l.rent_amount AS rentAmount,
@@ -67,7 +76,7 @@ export function listListingsForModeration(db: D1Database, status: ListingStatus,
      LEFT JOIN profiles p ON p.user_id = l.owner_id
      WHERE l.status = ?
      ORDER BY COALESCE(l.submitted_at, l.updated_at) ASC, l.id ASC LIMIT ?`,
-    [status, limit],
+    [status, safeLimit],
   );
 }
 
@@ -151,12 +160,14 @@ export interface ModerationEvent {
 
 /** Newest first. `rowid` breaks ties between events created in the same millisecond. */
 export function listModerationEvents(db: D1Database, listingId: string, limit: number = 50): Promise<ModerationEvent[]> {
+  const safeLimit = normalizeModerationLimit(limit, 50);
+  if (safeLimit === 0) return Promise.resolve([]);
   return queryAll<ModerationEvent>(
     db,
     `SELECT e.id, e.actor_id AS actorId, u.name AS actorName, e.actor_role AS actorRole, e.action,
             e.from_status AS fromStatus, e.to_status AS toStatus, e.reason, e.created_at AS createdAt
      FROM listing_moderation_events e LEFT JOIN "user" u ON u.id = e.actor_id
      WHERE e.listing_id = ? ORDER BY e.created_at DESC, e.rowid DESC LIMIT ?`,
-    [listingId, limit],
+    [listingId, safeLimit],
   );
 }

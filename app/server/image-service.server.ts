@@ -95,7 +95,7 @@ async function discardObject(bucket: Pick<ImageBucket, "delete">, key: string): 
   try {
     await bucket.delete(key);
   } catch (error) {
-    logger.warn("could not remove an unreferenced image file", { error });
+    logger.warn("could not remove an unreferenced image file", { objectKey: key, error });
   }
 }
 
