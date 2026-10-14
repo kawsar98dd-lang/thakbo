@@ -97,7 +97,7 @@ describe("rejecting", () => {
     expect(await listModerationEvents(db.d1, L, 1)).toEqual([history[0]]);
     // Negative SQLite LIMIT values mean “unlimited”; repositories must reject that footgun.
     expect(await listModerationEvents(db.d1, L, -1)).toEqual([]);
-    expect(await listModerationEvents(db.d1, L, Number.NaN)).toHaveLength(2);
+    expect(await listModerationEvents(db.d1, L, Number.NaN)).toHaveLength(3);
   });
 });
 

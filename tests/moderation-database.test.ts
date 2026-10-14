@@ -145,7 +145,7 @@ describe("moderation history", () => {
 
 describe("migration 0010 compatibility", () => {
   it("preserves pre-existing listings and moderation events when applied after migration 0009", () => {
-    const db = createTestDatabase({ stopBefore: "0010", seed: false });
+    const db = createTestDatabase({ stopBefore: "0010", seed: true });
     insertUser(db, "owner");
     db.raw.prepare("INSERT INTO listings (id, owner_id, slug, property_type) VALUES (?, 'owner', 'before-retention', 'mess')").run(L);
     makeComplete(db, L);
