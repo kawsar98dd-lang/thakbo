@@ -137,6 +137,7 @@ describe("reordering", () => {
   it("does not reorder an image when the submitted image id belongs to a different listing", async () => {
     const { db } = setup();
     const first = addImage(db, L);
+    const second = addImage(db, L);
     const secondListing = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
     db.raw.prepare("INSERT INTO listings (id, owner_id, slug, property_type) VALUES (?, 'owner', 'second', 'mess')").run(secondListing);
     const foreignImage = addImage(db, secondListing);
