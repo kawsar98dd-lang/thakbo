@@ -174,7 +174,7 @@ describe("admin city catalogue controls", () => {
     expect((await listAdminCitiesPage(db.d1)).cities.find((row) => row.id === city.id)?.isActive).toBe(0);
     expect(await updateAdminCityStatus(db.d1, city.id, true)).toBe(true);
     expect((await listAdminCitiesPage(db.d1)).cities.find((row) => row.id === city.id)).toMatchObject({ isActive: 1, slug: city.slug });
-    expect(db.raw.prepare("SELECT COUNT(*) AS count FROM areas WHERE city_id = ?").get(city.id).count).toBeGreaterThan(0);
+    expect(db.raw.prepare("SELECT COUNT(*) AS count FROM areas WHERE city_id = ?").get(city.id)?.count ?? 0).toBeGreaterThan(0);
   });
 
   it("refuses to re-enable a city whose district or ancestors are inactive", async () => {
