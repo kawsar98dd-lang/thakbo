@@ -5,6 +5,13 @@ It starts in **Rajshahi** but is built for many cities. One account lets a perso
 
 > The project was first generated under the temporary name "NIVORA". The official working brand is now **THAKBO**.
 
+## Documentation
+
+সব Phase-এর বিস্তারিত রিপোর্ট এখন `docs/phases/` ফোল্ডারে রাখা হয়েছে। রিপোর্টের সূচি: [Phase Reports](docs/phases/README.md)। অন্যান্য documentation-এর সূচি: [docs/README.md](docs/README.md)।
+
+---
+
+
 **Current source status (14 October 2026):** foundation, profiles, neighborhood-first location data, listing drafts/moderation, image handling, saved places, listing reports, admin report review and expanded search controls are present in the source. Recent edits fixed an admin-user query column mismatch, changed multi-select search controls to phone-friendly checkboxes, added English/Bangla area-alias resolution to search, made the save action sign-in-aware, widened the rounded-coordinate prefilter to avoid false negatives near radius boundaries, and added a privacy-rounded approximate distance label to location-based search cards. The admin location catalogue also now supports server-side search and pagination, so location rows beyond the previous fixed 500-row limit are reachable. These edits have **not** yet been verified by GitHub Actions or a live Cloudflare deployment.
 
 ## SEO canonical origin and sitemap policy

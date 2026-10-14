@@ -13,7 +13,7 @@ const FOOTER_LINKS = [
 
 export function SiteFooter() {
   return (
-    <footer className="mt-16 border-t border-slate-200 bg-white">
+    <footer className="mt-16 border-t border-slate-200 bg-white pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">
       <PageContainer className="flex flex-col gap-4 py-8 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="font-bold tracking-wider text-brand-800">
