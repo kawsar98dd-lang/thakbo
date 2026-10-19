@@ -73,10 +73,9 @@ def inspect(config: dict) -> list[tuple[str, str]]:
     if not prod:
         findings.append(("BLOCKER", "Production D1 binding DB is missing from d1_databases."))
     elif not prod.get("database_id") or not str(prod.get("database_id")).strip():
-        # Current Wrangler supports automatic resource provisioning for D1. An explicit ID is
-        # recommended for predictable account-specific operations, but its absence alone is
-        # not proof that a deploy cannot proceed. The authenticated deploy result is decisive.
-        findings.append(("WARNING", "Production D1 binding has no database_id. Wrangler may automatically provision a D1 resource, but this read-only check cannot confirm account permissions or the resulting resource. For deterministic migrations, create/identify the database and record its real ID."))
+        # The checker cannot verify the authenticated deploy path. Do not promise automatic
+        # provisioning; require the owner to confirm the real account-specific ID before release.
+        findings.append(("WARNING", "Production D1 binding has no database_id. This repository check cannot verify whether your authenticated deploy path can provision it. For predictable deployment and migrations, create/identify thakbo-db and set its real ID before release."))
     else:
         findings.append(("OK", "Production D1 binding includes a database_id."))
 

@@ -11,9 +11,9 @@
     "APP_NAME": "THAKBO"
   },
 
-  // D1 database. NO database_id is committed on purpose.
-  // Wrangler creates the database automatically on first deploy, or you can
-  // create it yourself and paste the id here (see README. "D1 setup").
+  // Production D1 binding. This starter ZIP deliberately does not guess your account-specific ID.
+  // Before deploying, create/identify thakbo-db in your Cloudflare account and set its real database_id here.
+  // The guarded production migration workflow resolves the database by exact name, but it does not edit this file.
   "d1_databases": [
     {
       "binding": "DB",
@@ -22,7 +22,7 @@
     }
   ],
 
-  // R2 bucket for listing images. Created on first deploy or manually (see README. "R2 setup").
+  // Production R2 bucket for listing images. Create/verify thakbo-media in your Cloudflare account before deployment.
   // Worker-to-R2 access uses this binding only; no access keys are needed.
   "r2_buckets": [
     {

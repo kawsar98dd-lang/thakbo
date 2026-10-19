@@ -33,6 +33,7 @@
 - [THAKBO Phase34 CI Regression Readiness Report](THAKBO_Phase34_CI_Regression_Readiness_Report.md)
 - [THAKBO Phase35 Security Production Config Audit Report](THAKBO_Phase35_Security_Production_Config_Audit_Report.md)
 - [THAKBO Phase36 Final Regression Deployment Readiness Report](THAKBO_Phase36_Final_Regression_Deployment_Readiness_Report.md)
+- [THAKBO Phase37 Source Audit and Cloudflare Handoff](THAKBO_Phase37_Source_Audit_and_Cloudflare_Handoff.md)
 - [THAKBO Phase3 SEO Update Report](THAKBO_Phase3_SEO_Update_Report.md)
 - [THAKBO Phase6 Report Abuse Protection](THAKBO_Phase6_Report_Abuse_Protection.md)
 - [THAKBO Phase7 Auth CSRF Hardening Report](THAKBO_Phase7_Auth_CSRF_Hardening_Report.md)

@@ -12,7 +12,7 @@ It starts in **Rajshahi** but is built for many cities. One account lets a perso
 ---
 
 
-**Current source status (14 October 2026):** foundation, profiles, neighborhood-first location data, listing drafts/moderation, image handling, saved places, listing reports, admin report review and expanded search controls are present in the source. Recent edits fixed an admin-user query column mismatch, changed multi-select search controls to phone-friendly checkboxes, added English/Bangla area-alias resolution to search, made the save action sign-in-aware, widened the rounded-coordinate prefilter to avoid false negatives near radius boundaries, and added a privacy-rounded approximate distance label to location-based search cards. The admin location catalogue also now supports server-side search and pagination, so location rows beyond the previous fixed 500-row limit are reachable. These edits have **not** yet been verified by GitHub Actions or a live Cloudflare deployment.
+**Current source status (19 October 2026 audit):** foundation, profiles, neighborhood-first location data, listing drafts/moderation, image handling, saved places, listing reports, admin report review and expanded search controls are present in the source. Recent edits fixed an admin-user query column mismatch, changed multi-select search controls to phone-friendly checkboxes, added English/Bangla area-alias resolution to search, made the save action sign-in-aware, widened the rounded-coordinate prefilter to avoid false negatives near radius boundaries, and added a privacy-rounded approximate distance label to location-based search cards. The admin location catalogue also now supports server-side search and pagination, so location rows beyond the previous fixed 500-row limit are reachable. The latest source audit reran the offline Python/SQLite checks successfully (70 Python unit tests plus SQL/static checks). The Node.js install, type-check, lint, Vitest suite, production build, GitHub Actions run and live Cloudflare behavior remain **unverified**; see `docs/phases/THAKBO_Phase37_Source_Audit_and_Cloudflare_Handoff.md`.
 
 ## SEO canonical origin and sitemap policy
 
@@ -189,7 +189,7 @@ The workflow **THAKBO Initialize Production D1** (`.github/workflows/initialize-
 ### What it does, in order
 1. **Safety checks** — only on `main`; for `apply` you must type `THAKBO-DB`; both GitHub secrets must exist.
 2. **Self-test** of the tooling (offline, fake wrangler on real SQLite).
-3. **Preflight** — checks the 10 migration files are in the required order (0000 … 0009) and that no migration/seed contains destructive SQL (the only `DROP` allowed is the audience-table rebuild in 0007, which copies every row first); finds the **one existing** database named `thakbo-db` (by name, through the Cloudflare API) and reads its migration state. If the name is missing or ambiguous it stops. It does not edit `wrangler.jsonc`: the database id is written to a temporary config that is deleted at the end and never committed.
+3. **Preflight** — checks the 11 migration files are in the required order (0000 … 0010) and that no migration/seed contains destructive SQL (the only `DROP` allowed is the audience-table rebuild in 0007, which copies every row first); finds the **one existing** database named `thakbo-db` (by name, through the Cloudflare API) and reads its migration state. If the name is missing or ambiguous it stops. It does not edit `wrangler.jsonc`: the database id is written to a temporary config that is deleted at the end and never committed.
 4. **Migrate** — `wrangler d1 migrations apply thakbo-db --remote`. Wrangler records every applied file in the table `d1_migrations` (set explicitly in the temporary config), so applied files are skipped on re-runs. If something fails part-way the workflow stops: **no seeding, no verification**.
 5. **Seed** — `db/seeds/0001_reference_data.sql`, then `db/seeds/0002_neighborhoods_and_facilities.sql` (unchanged files, idempotent), only after all migrations succeeded. Re-running re-applies the seed-managed names/labels of the seeded places and facilities; rows you add yourself are untouched.
 6. **Verify** — the run fails unless everything below is true.
@@ -210,8 +210,8 @@ It refuses to continue (and changes nothing) when the database **already has tab
 ### Expected verification results (fresh database, after `apply`)
 | Check | Expected |
 |---|---|
-| Migrations recorded | `9/9` in the order 0000 … 0008 (at the time of this historical report) |
-| Required tables | `21/21` (Better Auth: user, session, account, verification, rateLimit; THAKBO tables; `d1_migrations`) |
+| Migrations recorded | `11/11` in the order 0000 … 0010 (current source migration set) |
+| Required tables | `22/22` (Better Auth: user, session, account, verification, rateLimit; THAKBO tables; `d1_migrations`) |
 | countries / divisions / districts / cities | `1/1/1/1` (Bangladesh, Rajshahi division, Rajshahi district, Rajshahi city with Bangla name) |
 | Rajshahi active areas | `10` (Hetem Khan, Ghoshpara, Shaheb Bazar, Talaimari, Kazla, Motihar, Binodpur, Upashahar, Laxmipur, Sopura) |
 | Rajshahi aliases | `25`; the spellings Hatem Khan / হেতেম খান / হেটেম খান / হাতেম খান / Saheb Bazar / সাহেববাজার resolve to the right area |
@@ -277,7 +277,7 @@ wrangler.jsonc       Cloudflare configuration (bindings, no secrets, no fake ids
 
 No secret is ever stored in Git. `.env.example` documents the names only. THAKBO has no browser-visible variables in Milestone 1.
 
-## Cloudflare setup (not done yet — nothing below has been created)
+## Cloudflare setup (account-specific; this ZIP cannot verify which resources already exist)
 
 **Resource names used by this project:** D1 database `thakbo-db`, R2 bucket `thakbo-media`, Worker `thakbo`. These names are only *configuration*: **no database or bucket exists until the owner creates them in their own Cloudflare account.** No database id, account id or key is stored in this repository.
 
@@ -285,14 +285,14 @@ No secret is ever stored in Git. `.env.example` documents the names only. THAKBO
 1. **D1:** dashboard → *Storage & Databases → D1 SQL database → Create* → name `thakbo-db`. Note its **Database ID**.
 2. **R2:** *R2 object storage → Create bucket* → name `thakbo-media` (R2 may ask for a payment method to enable its free tier — check Cloudflare's current terms).
 3. **Connect the Worker:** *Workers & Pages → Create → Import a repository* → choose your GitHub repo. Build command `npm run build`, deploy command `npx wrangler deploy`.
-4. **Bind the database:** For predictable migrations and remote database operations, create/identify `thakbo-db` and add its real `database_id` to the `d1_databases` entry using GitHub's web editor. Wrangler also supports automatic resource provisioning in supported deploy flows, so a missing production ID is not by itself proof that a deploy must fail; the actual authenticated Cloudflare build result is decisive. Do not guess an ID.
-5. **Create the tables:** use the repository's documented GitHub Actions workflow `THAKBO Initialize Production D1` in `check` mode first. Do not paste only some migrations by hand; the project has migrations `0000` through `0009` and a guarded workflow that checks the existing database before applying them.
+4. **Bind the database:** For predictable migrations and remote database operations, create/identify `thakbo-db` and add its real `database_id` to the `d1_databases` entry using GitHub's web editor. Do not rely on automatic provisioning: this ZIP cannot verify how your authenticated deploy path will behave. Set the actual ID for a predictable deployment and migration workflow. Do not guess an ID.
+5. **Create the tables:** use the repository's documented GitHub Actions workflow `THAKBO Initialize Production D1` in `check` mode first. Do not paste only some migrations by hand; the current project has migrations `0000` through `0010` and a guarded workflow that checks the existing database before applying them.
 6. **Secret:** Worker → *Settings → Variables and Secrets → Add* → `BETTER_AUTH_SECRET` = a long random text (type "Secret").
 7. Open `https://<your-worker>/api/health` — expected `{"status":"ok","database":"ok"}`.
 
 
 ### Cloudflare Preview build status (important)
-The `previews` block is required by Cloudflare Workers Builds, but a block alone does not make the preview fully runnable. The current repository has no `previews.d1_databases` binding, so Preview is not ready to use the database-backed app. Cloudflare's Wrangler documentation supports automatic provisioning for D1 in some deploy flows, but a Preview should be explicitly isolated with its own D1 database ID; never let a Preview share production data. The checker distinguishes this Preview blocker from an absent production ID, which Wrangler may provision automatically depending on the authenticated deploy flow. It also blocks a Preview `MEDIA_BUCKET` that reuses the production bucket name.
+The current repository **does have** a `previews.d1_databases` binding with a configured ID and a separate `thakbo-media-preview` R2 bucket name. This is only a repository-level configuration check: it does not prove that the Preview database ID or bucket exists in your Cloudflare account, or that Preview secrets are configured. Verify the ID and bucket in Cloudflare before relying on Preview. Never point Preview at production data. The production D1 binding intentionally has no ID in this starter ZIP; for deterministic deployment and migration operations, create/identify `thakbo-db` and put its real ID in the production `d1_databases` entry. Do not guess an ID.
 
 Run this read-only diagnostic in GitHub Actions or a Python environment:
 ```bash
@@ -366,7 +366,7 @@ The admin report queue now supports server-side pagination and displays the tota
 
 The Admin Locations page now searches area/city names and slugs, paginates 25 records at a time, reports the matching record count, and clamps stale page numbers. Search input is length-limited and SQL LIKE wildcard characters are escaped; query values are bound parameters. This removes the previous UI/repository fixed 500-row ceiling for the admin location catalogue. Area enablement still validates the city and parent hierarchy on the server.
 
-Verification for this update: `python3 scripts/verify-sql.py` passed (all 9 migrations, repeatable seeds, 21 tables and foreign-key check); `python3 scripts/production_db_test.py RepositoryRules -v` passed (6 tests); a focused Python SQLite smoke test passed for location search, literal `%`/`_` matching behavior, pagination and stale-page clamping. Full Vitest, semantic TypeScript type-check, ESLint, production build, GitHub Actions and Cloudflare live behavior remain unverified because dependency installation did not complete in the authoring environment. Do not treat this update as production-ready or as a green CI result.
+Historical verification for this v10 update: `python3 scripts/verify-sql.py` passed at that time (then 9 migrations and 21 tables, repeatable seeds and foreign-key check); `python3 scripts/production_db_test.py RepositoryRules -v` passed (6 tests); a focused Python SQLite smoke test passed for location search, literal `%`/`_` matching behavior, pagination and stale-page clamping. Full Vitest, semantic TypeScript type-check, ESLint, production build, GitHub Actions and Cloudflare live behavior remain unverified because dependency installation did not complete in the authoring environment. Do not treat this update as production-ready or as a green CI result.
 
 ## October 2026 update — Admin city catalogue (v13)
 
@@ -379,4 +379,4 @@ The Preview-only D1 binding now uses the database ID supplied for `thakbo-previe
 
 
 ### Contact inbox (Phase 9)
-The public `/contact` page validates and stores messages in `contact_messages`. A hidden honeypot and a per-email 10-minute cooldown reduce simple bot and repeat submissions; these are lightweight safeguards, not comprehensive edge rate limiting. Admins can review messages at `/admin/contact-messages`, update status (`open`, `in_progress`, `closed`) and keep an internal note. The feature requires migration `0009_contact_messages.sql` to be applied to the target D1 database. It does not send email automatically and does not alter existing tables.
+The public `/contact` page validates and stores messages in `contact_messages`. A hidden honeypot and a per-email 10-minute cooldown reduce simple bot and repeat submissions; these are lightweight safeguards, not comprehensive edge rate limiting. Admins can review messages at `/admin/contact-messages`, update status (`open`, `in_progress`, `closed`) and keep an internal note. The feature requires migration `0009_contact_messages.sql` to be applied to the target D1 database. The current migration set has since grown through `0010_moderation_audit_retention.sql`; use the complete guarded migration workflow rather than applying only one file. It does not send email automatically and does not alter existing tables.

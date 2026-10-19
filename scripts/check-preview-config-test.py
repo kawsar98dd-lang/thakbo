@@ -28,7 +28,7 @@ class PreviewConfigTests(unittest.TestCase):
         preview = config["previews"]["d1_databases"][0]
         self.assertEqual(preview["database_id"], "d6645494-9dfd-4916-9eec-a040b3404ef7")
         self.assertEqual(preview["database_name"], "thakbo-preview")
-        self.assertTrue(any("Production D1" in message and "automatically provision" in message for message in warnings))
+        self.assertTrue(any("Production D1" in message and "real ID before release" in message for message in warnings))
 
     def test_preview_cannot_share_production_database(self):
         config = {
