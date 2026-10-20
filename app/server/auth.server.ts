@@ -4,6 +4,7 @@ import { D1Dialect } from "kysely-d1";
 import { assertAuthEnv, type AppEnv } from "./env.server";
 import { ensureProfile } from "./db/repositories/profiles";
 import { logger } from "./logger.server";
+import { sendResendEmail } from "./email.server";
 
 /**
  * Better Auth handles passwords (hashing), sessions and cookies. THAKBO never implements those itself.
@@ -25,7 +26,20 @@ export function createAuth(env: AppEnv) {
       minPasswordLength: 8,
       maxPasswordLength: 128,
       autoSignIn: true,
-      // Password reset needs an e-mail provider. It is intentionally not enabled in Milestone 1.
+      resetPasswordTokenExpiresIn: 60 * 60,
+      revokeSessionsOnPasswordReset: true,
+      sendResetPassword: async ({ user, url }) => {
+        // Better Auth creates and validates the one-time, expiring reset token.
+        // Resend is called only on the server; credentials and reset URLs are never logged.
+        await sendResendEmail(env, {
+          to: user.email,
+          subject: "Reset your THAKBO password",
+          text: `We received a request to reset your THAKBO password. Open this link to choose a new password (valid for 1 hour): ${url}
+
+If you did not request this, you can ignore this email.`,
+          html: `<p>We received a request to reset your THAKBO password.</p><p><a href="${url}">Reset your password</a></p><p>This link expires in 1 hour. If you did not request this, you can ignore this email.</p>`,
+        });
+      },
     },
     session: {
       expiresIn: 60 * 60 * 24 * 30,

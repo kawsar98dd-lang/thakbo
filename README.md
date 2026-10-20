@@ -380,3 +380,13 @@ The Preview-only D1 binding now uses the database ID supplied for `thakbo-previe
 
 ### Contact inbox (Phase 9)
 The public `/contact` page validates and stores messages in `contact_messages`. A hidden honeypot and a per-email 10-minute cooldown reduce simple bot and repeat submissions; these are lightweight safeguards, not comprehensive edge rate limiting. Admins can review messages at `/admin/contact-messages`, update status (`open`, `in_progress`, `closed`) and keep an internal note. The feature requires migration `0009_contact_messages.sql` to be applied to the target D1 database. The current migration set has since grown through `0010_moderation_audit_retention.sql`; use the complete guarded migration workflow rather than applying only one file. It does not send email automatically and does not alter existing tables.
+
+## Resend password-reset email setup
+
+Password reset uses Better Auth's built-in one-time reset token flow and Resend for email delivery. Configure these **Worker secrets/variables** in Cloudflare (do not put API keys in this repository):
+
+- `RESEND_API_KEY` — a Resend API key with sending permission, stored as a Worker secret.
+- `RESEND_FROM_EMAIL` — optional sender address, e.g. `THAKBO <noreply@trustedtoolsweb.com>`. The domain in this address must be verified in Resend.
+- `BETTER_AUTH_URL` — optional; set this to the exact public THAKBO origin if Better Auth does not detect it correctly (currently `https://thakbo.kawsar98dd.workers.dev`).
+
+The password-reset token expires after one hour, and other sessions are configured to be revoked after a successful password reset. The reset request page returns a generic success message to avoid disclosing whether an email address is registered. Test with an account whose mailbox you control before enabling this feature for production users. Do not share the Resend API key in chat, screenshots, or source control.

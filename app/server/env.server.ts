@@ -11,6 +11,8 @@ export interface AppEnv {
   BETTER_AUTH_SECRET: string;
   BETTER_AUTH_URL?: string;
   APP_NAME?: string;
+  RESEND_API_KEY?: string;
+  RESEND_FROM_EMAIL?: string;
 }
 
 const secretsSchema = z.object({
