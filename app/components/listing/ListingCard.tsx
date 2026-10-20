@@ -16,18 +16,18 @@ export function ListingCard({ listing }: { listing: ListingCardData }) {
     otherMonthlyCost: listing.otherMonthlyCost,
   });
   return (
-    <Card className="p-0 sm:p-0">
-      <Link to={listingPath(listing.slug)} className="block space-y-2 p-0 hover:bg-slate-50">
-        {listing.coverImageId ? <img src={listingImagePath(listing.coverImageId)} alt={`Photo of ${listing.title}`} loading="lazy" decoding="async" className="aspect-[16/10] w-full rounded-t-xl bg-slate-100 object-cover" /> : <div className="flex aspect-[16/10] items-center justify-center rounded-t-xl bg-slate-100 text-sm text-slate-500">No photo</div>}
-        <div className="space-y-2 p-4">
+    <Card className="listing-card p-0 sm:p-0">
+      <Link to={listingPath(listing.slug)} className="listing-card-link space-y-0 p-0">
+        {listing.coverImageId ? <img src={listingImagePath(listing.coverImageId)} alt={`Photo of ${listing.title}`} loading="lazy" decoding="async" className="listing-card-image" /> : <div className="flex aspect-[16/10] items-center justify-center bg-gradient-to-br from-brand-50 to-slate-100 text-sm font-medium text-slate-500">No photo</div>}
+        <div className="space-y-2.5 p-4 sm:p-5">
         <div className="flex flex-wrap gap-2">
           <Badge tone="brand">{PROPERTY_TYPE_LABELS[listing.propertyType]}</Badge>
           <Badge tone={listing.availabilityStatus === "available" ? "neutral" : "warning"}>
             {AVAILABILITY_LABELS[listing.availabilityStatus]}
           </Badge>
         </div>
-        <h3 className="text-base font-semibold">{listing.title}</h3>
-        <p className="text-sm text-slate-600">
+        <h3 className="line-clamp-2 text-base font-bold leading-snug text-slate-900">{listing.title}</h3>
+        <p className="text-sm text-slate-500">
           {listing.areaName}, {listing.cityName}
         </p>
         {typeof listing.approximateDistanceKm === "number" ? (
@@ -37,7 +37,7 @@ export function ListingCard({ listing }: { listing: ListingCardData }) {
               : `Approx. ${Math.round(listing.approximateDistanceKm)} km from your search point`}
           </p>
         ) : null}
-        <p className="text-lg font-bold text-brand-800">
+        <p className="text-xl font-extrabold tracking-tight text-brand-800">
           {formatTaka(listing.rentAmount)}
           <span className="text-sm font-normal text-slate-600"> / month</span>
         </p>

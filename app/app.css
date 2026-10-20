@@ -1,10 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Noto Sans Bengali",
-    "Helvetica Neue", Arial, sans-serif;
-
-  /* THAKBO brand: deep teal (trust, location) + warm amber accent. */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans", "Noto Sans Bengali", "Helvetica Neue", Arial, sans-serif;
   --color-brand-50: #effaf7;
   --color-brand-100: #d6f2ea;
   --color-brand-200: #aee5d6;
@@ -14,30 +11,59 @@
   --color-brand-600: #1f7d6f;
   --color-brand-700: #1c655b;
   --color-brand-800: #1a514a;
-  --color-brand-900: #18433e;
-
+  --color-brand-900: #123c36;
   --color-accent-100: #fef0c7;
   --color-accent-500: #f59e0b;
   --color-accent-600: #d97706;
 }
 
 @layer base {
-  html {
-    -webkit-text-size-adjust: 100%;
-    scroll-behavior: smooth;
-  }
-  body {
-    @apply bg-slate-50 font-sans text-slate-900 antialiased;
-    overflow-x: hidden;
-  }
-  /* Visible keyboard focus everywhere. */
-  :focus-visible {
-    outline: 3px solid var(--color-brand-500);
-    outline-offset: 2px;
-    border-radius: 4px;
-  }
+  :root { color-scheme: light; font-synthesis: none; text-rendering: optimizeLegibility; }
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; scroll-padding-top: 6rem; }
+  body { @apply bg-slate-50 font-sans text-slate-900 antialiased; overflow-x: hidden; min-width: 320px; }
+  body, button, input, select, textarea { font-family: var(--font-sans); }
+  button, input, select, textarea { font-size: 16px; }
+  img, video, canvas, svg { max-width: 100%; }
+  img { height: auto; }
+  ::selection { background: #bce9dc; color: #123c36; }
+  :focus-visible { outline: 3px solid var(--color-brand-500); outline-offset: 3px; border-radius: 6px; }
+  a { -webkit-tap-highlight-color: transparent; }
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
-    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
   }
+}
+
+@layer components {
+  /* Consistent, calm surface system shared by public, account and admin pages. */
+  .site-header { box-shadow: 0 4px 24px rgb(15 55 48 / 5%); }
+  .site-brand-mark { box-shadow: 0 5px 14px rgb(28 101 91 / 22%); }
+  .site-nav-link { position: relative; transition: color .18s ease, background .18s ease; }
+  .site-nav-link[aria-current="page"] { background: #effaf7; color: #18433e; }
+  .site-nav-link[aria-current="page"]::after { content: ""; position: absolute; left: 14px; right: 14px; bottom: 3px; height: 2px; border-radius: 9px; background: #2a9d89; }
+  .page-surface { border: 1px solid #e7eeeb; border-radius: 1.25rem; background: white; box-shadow: 0 8px 28px rgb(17 55 48 / 4%); }
+  .section-kicker { color: #1f7d6f; font-size: .75rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+  .listing-card { overflow: hidden; border: 1px solid #e6eeeb; border-radius: 1.1rem; background: #fff; box-shadow: 0 3px 12px rgb(15 55 48 / 4%); transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease; }
+  .listing-card:hover { transform: translateY(-3px); border-color: #b8ded3; box-shadow: 0 14px 34px rgb(15 55 48 / 10%); }
+  .listing-card-link { display: block; height: 100%; }
+  .listing-card-image { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; background: #e9f2ef; transition: transform .35s ease; }
+  .listing-card-link:hover .listing-card-image { transform: scale(1.025); }
+  .hero-search { border: 1px solid rgb(255 255 255 / 70%); border-radius: 1.2rem; box-shadow: 0 18px 55px rgb(5 35 31 / 24%); }
+  .soft-link { transition: color .18s ease, background .18s ease, border-color .18s ease; }
+  .form-control, input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea { max-width: 100%; }
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea { border-radius: .7rem; }
+  :is(input, select, textarea):not([type="checkbox"]):not([type="radio"]):focus { border-color: #2a9d89; box-shadow: 0 0 0 3px rgb(42 157 137 / 13%); }
+  table { width: 100%; border-collapse: separate; border-spacing: 0; }
+  th { font-weight: 700; }
+  td, th { overflow-wrap: anywhere; }
+}
+
+@media (hover: none) {
+  .listing-card:hover { transform: none; box-shadow: 0 3px 12px rgb(15 55 48 / 4%); }
+  .listing-card-link:hover .listing-card-image { transform: none; }
+}
+@media (max-width: 640px) {
+  body { font-size: 15px; }
+  h1 { overflow-wrap: anywhere; }
+  button, [role="button"] { touch-action: manipulation; }
 }

@@ -7,8 +7,8 @@ type Variant = "primary" | "secondary" | "ghost" | "danger";
 type Size = "md" | "lg";
 
 const VARIANTS: Record<Variant, string> = {
-  primary: "bg-brand-700 text-white hover:bg-brand-800 disabled:bg-brand-300",
-  secondary: "border border-slate-300 bg-white text-slate-900 hover:bg-slate-100 disabled:text-slate-400",
+  primary: "bg-gradient-to-r from-brand-700 to-brand-800 text-white shadow-sm shadow-brand-900/10 hover:-translate-y-0.5 hover:from-brand-800 hover:to-brand-900 hover:shadow-md disabled:translate-y-0 disabled:bg-brand-300",
+  secondary: "border border-slate-200 bg-white text-slate-800 shadow-sm hover:-translate-y-0.5 hover:border-brand-200 hover:bg-brand-50 hover:text-brand-900 disabled:translate-y-0 disabled:text-slate-400",
   ghost: "text-brand-800 hover:bg-brand-50 disabled:text-slate-400",
   danger: "bg-red-700 text-white hover:bg-red-800 disabled:bg-red-300",
 };
@@ -20,7 +20,7 @@ const SIZES: Record<Size, string> = {
 };
 
 const BASE =
-  "inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-colors disabled:cursor-not-allowed";
+  "inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-all duration-200 ease-out disabled:cursor-not-allowed";
 
 export function buttonClasses(variant: Variant = "primary", size: Size = "md", className?: string) {
   return cx(BASE, VARIANTS[variant], SIZES[size], className);

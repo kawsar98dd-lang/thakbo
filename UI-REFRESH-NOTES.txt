@@ -1,0 +1,14 @@
+THAKBO Premium UI Refresh
+
+Scope
+- Presentation-only refresh. Existing routes, loaders, forms, database code, authentication, permissions, listing workflows, and deployment configuration are unchanged.
+- Updated the global design system for calmer spacing, clearer focus states, responsive form sizing, improved card/button surfaces, and reduced-motion support.
+- Refined shared header, footer, mobile tab navigation, page headers, and listing cards.
+- Refreshed the homepage hero, search panel, location chips, recent listing section, and host call-to-action.
+- Kept existing route destinations and form field names/actions intact.
+
+Validation
+- TypeScript/JSX syntax transpilation passed for all modified TSX files.
+- Full typecheck, lint, unit tests, and production build were not completed in this packaging environment because npm dependencies did not finish installing. Run the repository's `npm run check` in GitHub Actions or a supported Node.js environment before deploying.
+
+No database migrations or environment changes are included.

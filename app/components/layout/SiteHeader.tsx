@@ -16,20 +16,20 @@ const DESKTOP_LINKS = [
   { to: PATHS.profile, label: "Profile", end: false },
 ] as const;
 
-const linkClass = "rounded-md px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-900";
+const linkClass = "site-nav-link rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600 hover:bg-brand-50 hover:text-brand-900";
 
 export function SiteHeader({ user }: { user: RootLoaderData["user"] }) {
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
-      <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+    <header className="site-header sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 backdrop-blur-xl">
+      <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-3 px-3 sm:px-6 lg:px-8">
         <Link to={PATHS.home} className="flex min-h-11 items-center gap-2 font-bold tracking-wider text-brand-800" aria-label={`${SITE.name} home`}>
-          <span className="grid size-8 place-items-center rounded-lg bg-brand-700 text-white">
+          <span className="site-brand-mark grid size-9 place-items-center rounded-xl bg-gradient-to-br from-brand-600 to-brand-900 text-white">
             <Icon name="pin" className="size-5" />
           </span>
-          <span className="text-lg">{SITE.name}</span>
+          <span className="text-lg font-extrabold tracking-tight sm:text-xl">{SITE.name}</span>
         </Link>
 
-        <nav aria-label="Main" className="hidden items-center gap-1 md:flex">
+        <nav aria-label="Main" className="hidden items-center gap-0.5 md:flex lg:gap-1">
           {DESKTOP_LINKS.map((item) =>
             "anchor" in item ? (
               <a key={item.label} href={item.to} className={linkClass}>
@@ -48,8 +48,8 @@ export function SiteHeader({ user }: { user: RootLoaderData["user"] }) {
           )}
         </nav>
 
-        <div className="flex items-center gap-2">
-          <ButtonLink to={PATHS.newListing} size="md" className="px-3 sm:px-4">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+          <ButtonLink to={PATHS.newListing} size="md" className="px-3 shadow-sm sm:px-4">
             <Icon name="plus" className="size-4" />
             <span>List a Place</span>
           </ButtonLink>
