@@ -41,6 +41,36 @@ describe("favorites and reports", () => {
     expect(db.raw.prepare("SELECT status, reason FROM reports WHERE id = ?").get(REPORT_ID)).toMatchObject({ status: "pending", reason: "wrong_information" });
   });
 
+  it("rejects reports for unpublished listings and reports from the listing owner", async () => {
+    const db = createTestDatabase();
+    await publishedListing(db);
+    insertUser(db, "reporter");
+
+    expect(await submitListingReport(db.d1, {
+      id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee", slug: "public-place", reporterId: "owner",
+      reason: "spam", details: "Owners must not report their own listing.",
+    })).toBe(false);
+
+    db.raw.prepare("UPDATE listings SET status = 'draft' WHERE id = ?").run(LISTING_ID);
+    expect(await submitListingReport(db.d1, {
+      id: "ffffffff-ffff-4fff-8fff-ffffffffffff", slug: "public-place", reporterId: "reporter",
+      reason: "spam", details: "Unpublished listings should not be reportable.",
+    })).toBe(false);
+    expect(db.raw.prepare("SELECT COUNT(*) AS count FROM reports").get()).toMatchObject({ count: 0 });
+  });
+
+  it("allows a new report after the previous report is no longer pending", async () => {
+    const db = createTestDatabase(); insertUser(db, "reporter"); await publishedListing(db);
+    expect(await submitListingReport(db.d1, {
+      id: REPORT_ID, slug: "public-place", reporterId: "reporter", reason: "wrong_information", details: null,
+    })).toBe(true);
+    db.raw.prepare("UPDATE reports SET status = 'resolved' WHERE id = ?").run(REPORT_ID);
+    expect(await submitListingReport(db.d1, {
+      id: "ffffffff-ffff-4fff-8fff-ffffffffffff", slug: "public-place", reporterId: "reporter", reason: "spam", details: null,
+    })).toBe(true);
+    expect(db.raw.prepare("SELECT COUNT(*) AS count FROM reports WHERE reporter_id = ?").get("reporter")).toMatchObject({ count: 2 });
+  });
+
   it("limits each account to 10 reports in a rolling 24-hour window", async () => {
     const db = createTestDatabase(); insertUser(db, "reporter"); await publishedListing(db);
     for (let i = 0; i < 10; i++) {

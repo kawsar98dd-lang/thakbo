@@ -7,6 +7,7 @@ import { Button } from "~/components/ui/Button";
 import { TextField } from "~/components/forms/TextField";
 import { TextAreaField } from "~/components/forms/TextAreaField";
 import { buildMeta } from "~/lib/seo";
+import { validateContactMessage } from "~/lib/validation/contact-message";
 import { cloudflareContext } from "~/server/context.server";
 import { execute, queryFirst } from "~/server/db/client";
 
@@ -20,13 +21,12 @@ export async function action({ request, context }: Route.ActionArgs) {
     const value = form.get(key);
     return typeof value === "string" ? value.trim() : "";
   };
-  const values = { name: raw("name"), email: raw("email").toLowerCase(), subject: raw("subject"), message: raw("message") };
+  const submitted = { name: raw("name"), email: raw("email"), subject: raw("subject"), message: raw("message") };
   // Honeypot: silently accept bot submissions without storing or revealing the field.
   if (raw("website")) return data({ ok: true, message: "Thank you. Your message has been received." });
-  if (values.name.length < 2 || values.name.length > 100) return data({ ok: false, message: "Name must be between 2 and 100 characters.", values }, { status: 400 });
-  if (values.email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email)) return data({ ok: false, message: "Enter a valid email address.", values }, { status: 400 });
-  if (values.subject.length < 3 || values.subject.length > 160) return data({ ok: false, message: "Subject must be between 3 and 160 characters.", values }, { status: 400 });
-  if (values.message.length < 10 || values.message.length > 3000) return data({ ok: false, message: "Message must be between 10 and 3,000 characters.", values }, { status: 400 });
+  const validation = validateContactMessage(submitted);
+  if (!validation.success) return data({ ok: false, message: validation.message, values: submitted }, { status: 400 });
+  const values = validation.data;
 
   const { env } = context.get(cloudflareContext);
   // A simple per-email cooldown helps prevent accidental repeated submissions. This is not a substitute for edge-level abuse controls.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getAdminOverview, listAdminCitiesPage, listAdminFacilities, listAdminLocations, listAdminLocationsPage, listAdminReportsPage, listAdminUsers, listAdminUsersPage, updateAdminAreaStatus, updateAdminCityStatus, updateAdminFacilityStatus } from "~/server/db/repositories/admin-console";
+import { getAdminOverview, listAdminCitiesPage, listAdminFacilities, listAdminLocations, listAdminLocationsPage, listAdminReportsPage, updateAdminReport, listAdminUsers, listAdminUsersPage, updateAdminAreaStatus, updateAdminCityStatus, updateAdminFacilityStatus } from "~/server/db/repositories/admin-console";
 import { createTestDatabase, insertUser, seededAreaId, seededCityId } from "./helpers/sqlite-d1";
 import { createDraftListing } from "~/server/db/repositories/listings";
 import { draftData, walkToStatus } from "./helpers/listings";
@@ -120,6 +120,25 @@ describe("admin location catalogue controls", () => {
   it("reports an unknown area ID", async () => {
     const db = createTestDatabase();
     expect(await updateAdminAreaStatus(db.d1, 999999, false)).toBe(false);
+  });
+});
+
+describe("admin report review updates", () => {
+  it("saves a valid status and internal note, and reports missing IDs", async () => {
+    const db = createTestDatabase();
+    insertUser(db, "report-owner");
+    await createDraftListing(db.d1, "report-owner", draftData({
+      title: "Review test listing", cityId: seededCityId(db), areaId: seededAreaId(db, "hetem-khan"),
+      latitude: 24.37, longitude: 88.6,
+    }), { id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee", slug: "review-test-listing" });
+    walkToStatus(db, "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee", "published");
+    db.raw.prepare("INSERT INTO reports (id, listing_id, reason) VALUES (?, ?, ?)").run("review-report", "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee", "spam");
+
+    expect(await updateAdminReport(db.d1, "review-report", "reviewed", "Checked listing details.")).toBe(true);
+    expect(db.raw.prepare("SELECT status, admin_note FROM reports WHERE id = ?").get("review-report")).toMatchObject({
+      status: "reviewed", admin_note: "Checked listing details.",
+    });
+    expect(await updateAdminReport(db.d1, "does-not-exist", "resolved", null)).toBe(false);
   });
 });
 

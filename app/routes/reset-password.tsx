@@ -24,7 +24,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     const result = await getAuth(env).api.resetPassword({ body: { token: parsed.data.token, newPassword: parsed.data.password } });
     if (result) return redirect(`${PATHS.login}?passwordReset=success`);
     return data({ success: false, message: "This reset link may have expired or already been used. Request a new one." }, { status: 400 });
-  } catch {
+  } catch (error) {
     logger.warn("password reset completion failed");
     return data({ success: false, message: "This reset link is invalid, expired, or already used. Request a new link and try again." }, { status: 400 });
   }
