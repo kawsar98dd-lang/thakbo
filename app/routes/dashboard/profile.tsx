@@ -2,6 +2,7 @@ import { data, Form } from "react-router";
 import type { Route } from "./+types/profile";
 import { SelectField } from "~/components/forms/SelectField";
 import { SubmitButton } from "~/components/forms/SubmitButton";
+import { Button } from "~/components/ui/Button";
 import { TextAreaField } from "~/components/forms/TextAreaField";
 import { TextField } from "~/components/forms/TextField";
 import { PageHeader } from "~/components/layout/PageContainer";
@@ -69,6 +70,32 @@ export default function ProfilePage({ loaderData, actionData }: Route.ComponentP
     <>
       <PageHeader title="আমার প্রোফাইল / My profile" description="This information helps owners and seekers trust each other. Your e-mail is never shown publicly." />
       <Card className="max-w-xl">
+        <section className="mb-6 border-b border-slate-200 pb-6" aria-labelledby="profile-photo-heading">
+          <h2 id="profile-photo-heading" className="text-lg font-semibold text-slate-900">প্রোফাইল ছবি / Profile photo</h2>
+          <p className="mt-1 text-sm text-slate-600">Upload a clear JPEG, PNG or WebP image (maximum 5 MB).</p>
+          <div className="mt-4 flex items-center gap-4">
+            {profile.avatarUrl ? (
+              <img src="/dashboard/profile/avatar" alt="Your profile photo" className="size-20 rounded-full border border-slate-200 object-cover" />
+            ) : (
+              <div className="flex size-20 items-center justify-center rounded-full bg-brand-50 text-2xl font-semibold text-brand-800" aria-label="No profile photo">
+                {(profile.displayName.trim().charAt(0) || "?").toUpperCase()}
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <Form method="post" action="/dashboard/profile/avatar" encType="multipart/form-data" className="space-y-3">
+                <label className="block text-sm font-medium text-slate-800" htmlFor="avatar-image">Choose profile photo</label>
+                <input id="avatar-image" name="image" type="file" accept="image/jpeg,image/png,image/webp" required className="block w-full text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:font-semibold file:text-brand-800" />
+                <Button type="submit" size="md">Upload photo</Button>
+              </Form>
+              {profile.avatarUrl ? (
+                <Form method="post" action="/dashboard/profile/avatar" className="mt-2">
+                  <input type="hidden" name="intent" value="delete" />
+                  <Button type="submit" variant="secondary" size="md">Remove photo</Button>
+                </Form>
+              ) : null}
+            </div>
+          </div>
+        </section>
         {actionData?.saved ? <Alert tone="success">Profile saved.</Alert> : null}
         <Form method="post" className="mt-4 space-y-4" noValidate>
           <div>

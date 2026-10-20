@@ -8,6 +8,7 @@ export default [
   route("logout", "routes/logout.ts"),
   // Image upload/delete (owner only) and image serving (public only for published listings).
   route("dashboard/listings/:id/images", "routes/dashboard/listing-images.ts"),
+  route("dashboard/profile/avatar", "routes/dashboard/profile-avatar.ts"),
   route("images/:imageId", "routes/images.ts"),
   route("robots.txt", "routes/seo/robots.ts"),
   route("sitemap.xml", "routes/seo/sitemap.ts"),

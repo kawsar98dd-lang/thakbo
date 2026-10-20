@@ -46,3 +46,13 @@ export async function updateProfile(db: D1Database, userId: string, update: Prof
   );
   return result.meta.changes > 0;
 }
+
+/** Stores only the server-generated R2 key for the verified session user's avatar. */
+export async function updateAvatarKey(db: D1Database, userId: string, avatarUrl: string | null): Promise<boolean> {
+  const result = await execute(
+    db,
+    `UPDATE profiles SET avatar_url = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE user_id = ?`,
+    [avatarUrl, userId],
+  );
+  return result.meta.changes > 0;
+}
