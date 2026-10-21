@@ -31,5 +31,6 @@ export default tseslint.config(
     files: ["app/server/logger.server.ts"],
     rules: { "no-console": "off" },
   },
+  { files: ["public/sw.js"], languageOptions: { globals: { ...globals.serviceworker } } },
   { files: ["*.js", "*.config.ts"], languageOptions: { globals: globals.node } },
 );
