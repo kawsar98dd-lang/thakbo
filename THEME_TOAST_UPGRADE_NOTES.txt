@@ -1,0 +1,27 @@
+THAKBO — Dual Theme & Global Toast Upgrade
+
+Starting point: THAKBO_Premium_UI_Refresh.zip (Phase 44 homepage feed + premium UI refresh).
+
+Changes are limited to UI files:
+- app/app.css: adds Cyberpunk-inspired dark theme palette, responsive theme toggle styles, toast styles, and dark-surface overrides while preserving light theme as default fallback.
+- app/root.tsx: adds early theme preference initialization (saved preference, otherwise system preference) and mounts the global ToastProvider.
+- app/components/layout/SiteHeader.tsx: adds the theme toggle in the shared site header.
+- app/components/ui/Alert.tsx: success/error alerts with simple text content are presented as transient toasts; informative and titled/complex alerts remain inline for accessibility and important instructions.
+- app/components/ui/ThemeToggle.tsx: new light/dark switch and localStorage persistence.
+- app/components/ui/ToastProvider.tsx: new global responsive toast stack with dismiss buttons, timed dismissal, and status/error announcements.
+
+Theme behavior:
+- A user's explicit choice is stored as localStorage key `thakbo-theme` (`light` or `dark`).
+- On first visit, the browser's color-scheme preference is used.
+- Theme selection is client-side; no database schema or server/business logic changes are intended.
+
+Safety notes:
+- Existing Light Theme remains the default when system preference is light or storage is unavailable.
+- Important static instructions and complex/titled errors remain inline instead of disappearing as a toast.
+- The toast stack is responsive and accounts for mobile safe-area insets.
+- Reduced-motion preferences are respected.
+
+Validation status:
+- ZIP integrity and SHA-256 are supplied separately.
+- Full npm install/typecheck/lint/test/build could not be completed in this environment; do not consider this a verified production release until GitHub CI and preview-device checks pass.
+- No live Cloudflare resources were changed.

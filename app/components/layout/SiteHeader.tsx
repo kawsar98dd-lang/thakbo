@@ -5,6 +5,7 @@ import { PATHS } from "~/lib/routes";
 import { cx } from "~/lib/utils";
 import type { RootLoaderData } from "~/lib/types";
 import { Icon } from "../ui/Icon";
+import { ThemeToggle } from "../ui/ThemeToggle";
 
 // Desktop navigation (blueprint: Home, Search, Explore, List a Place, Favorites, Profile).
 // "Explore" jumps to the browse sections of the home page.
@@ -49,6 +50,7 @@ export function SiteHeader({ user }: { user: RootLoaderData["user"] }) {
         </nav>
 
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+          <ThemeToggle />
           <ButtonLink to={PATHS.newListing} size="md" className="px-3 shadow-sm sm:px-4">
             <Icon name="plus" className="size-4" />
             <span>List a Place</span>

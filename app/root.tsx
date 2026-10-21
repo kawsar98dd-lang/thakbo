@@ -12,6 +12,7 @@ import {
 import type { Route } from "./+types/root";
 import stylesheet from "./app.css?url";
 import { GlobalProgress } from "./components/layout/GlobalProgress";
+import { ToastProvider } from "./components/ui/ToastProvider";
 import { RouteError } from "./components/layout/RouteError";
 import { SITE } from "./lib/constants";
 import { canonicalUrl } from "./lib/seo";
@@ -44,6 +45,7 @@ export function Layout({ children }: { children: ReactNode }) {
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <meta name="theme-color" content="#1c655b" />
+        <script dangerouslySetInnerHTML={{ __html: `try{var t=localStorage.getItem('thakbo-theme');if(t!=='light'&&t!=='dark'){t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}document.documentElement.dataset.theme=t;document.documentElement.style.colorScheme=t}catch(e){document.documentElement.dataset.theme='light'}` }} />
         {root ? <link rel="canonical" href={canonicalUrl(root.siteOrigin, pathname)} /> : null}
         {root ? <meta property="og:url" content={canonicalUrl(root.siteOrigin, pathname)} /> : null}
         {/^(\/(?:dashboard|admin)(?:\/|$)|\/(?:login|register|forgot-password|reset-password)(?:\/|$))/.test(pathname) ? (
@@ -53,8 +55,10 @@ export function Layout({ children }: { children: ReactNode }) {
         <Links />
       </head>
       <body>
-        <GlobalProgress />
-        {children}
+        <ToastProvider>
+          <GlobalProgress />
+          {children}
+        </ToastProvider>
         <ScrollRestoration />
         <Scripts />
       </body>
