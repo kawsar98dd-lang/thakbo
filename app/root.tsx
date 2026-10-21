@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import {
   Links,
   Meta,
@@ -36,6 +36,22 @@ export function loader({ context }: Route.LoaderArgs): RootLoaderData {
   };
 }
 
+function ThemeInitializer() {
+  useEffect(() => {
+    let theme: "light" | "dark" = "light";
+    try {
+      const saved = window.localStorage.getItem("thakbo-theme");
+      if (saved === "light" || saved === "dark") theme = saved;
+      else if (window.matchMedia("(prefers-color-scheme: dark)").matches) theme = "dark";
+    } catch {
+      // If storage is unavailable, use the default light theme.
+    }
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
+  }, []);
+  return null;
+}
+
 export function Layout({ children }: { children: ReactNode }) {
   const root = useRouteLoaderData<RootLoaderData>("root");
   const { pathname } = useLocation();
@@ -45,7 +61,6 @@ export function Layout({ children }: { children: ReactNode }) {
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <meta name="theme-color" content="#1c655b" />
-        <script dangerouslySetInnerHTML={{ __html: `try{var t=localStorage.getItem('thakbo-theme');if(t!=='light'&&t!=='dark'){t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}document.documentElement.dataset.theme=t;document.documentElement.style.colorScheme=t}catch(e){document.documentElement.dataset.theme='light'}` }} />
         {root ? <link rel="canonical" href={canonicalUrl(root.siteOrigin, pathname)} /> : null}
         {root ? <meta property="og:url" content={canonicalUrl(root.siteOrigin, pathname)} /> : null}
         {/^(\/(?:dashboard|admin)(?:\/|$)|\/(?:login|register|forgot-password|reset-password)(?:\/|$))/.test(pathname) ? (
@@ -56,6 +71,7 @@ export function Layout({ children }: { children: ReactNode }) {
       </head>
       <body>
         <ToastProvider>
+          <ThemeInitializer />
           <GlobalProgress />
           {children}
         </ToastProvider>

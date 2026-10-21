@@ -148,3 +148,49 @@ html[data-theme="dark"] .border-green-200 { border-color: #236b50 !important; }
 html[data-theme="dark"] .bg-amber-50 { background-color: #302515 !important; }
 html[data-theme="dark"] .text-amber-900 { color: #fde68a !important; }
 html[data-theme="dark"] .border-amber-200 { border-color: #775a2b !important; }
+
+
+/* Contrast hardening: keep semantic foregrounds readable on every themed surface. */
+html[data-theme="dark"] .home-owner-cta {
+  background: #101827 !important;
+  color: #edf4ff !important;
+  border-color: #2a394d !important;
+}
+html[data-theme="dark"] .home-owner-cta h2 { color: #f1f5f9 !important; }
+html[data-theme="dark"] .home-owner-cta p:not(.section-kicker) { color: #cbd5e1 !important; }
+html[data-theme="dark"] .home-owner-cta .section-kicker { color: #67e8f9 !important; }
+html[data-theme="dark"] .home-owner-cta a, html[data-theme="dark"] .home-owner-cta button { color: #ffffff !important; }
+html[data-theme="dark"] .bg-gradient-to-r.from-white,
+html[data-theme="dark"] .bg-gradient-to-br.from-brand-50,
+html[data-theme="dark"] .bg-gradient-to-br.from-white {
+  --tw-gradient-from: #101827 var(--tw-gradient-from-position) !important;
+  --tw-gradient-to: #172235 var(--tw-gradient-to-position) !important;
+}
+html[data-theme="dark"] .text-brand-50,
+html[data-theme="dark"] .text-brand-100,
+html[data-theme="dark"] .text-brand-200,
+html[data-theme="dark"] .text-brand-300,
+html[data-theme="dark"] .text-brand-400 { color: #c9f7ff !important; }
+html[data-theme="dark"] .text-white { color: #ffffff !important; }
+html[data-theme="dark"] .hero-search { background: #101827 !important; color: #edf4ff !important; border-color: #526176 !important; }
+html[data-theme="dark"] .hero-search label,
+html[data-theme="dark"] .hero-search legend { color: #e2e8f0 !important; }
+html[data-theme="dark"] .hero-search input,
+html[data-theme="dark"] .hero-search select,
+html[data-theme="dark"] .hero-search textarea { background: #0b1320 !important; color: #f1f5f9 !important; border-color: #46566b !important; }
+html[data-theme="dark"] .hero-search input::placeholder { color: #a8b6c8 !important; }
+html[data-theme="light"] .home-owner-cta { background: linear-gradient(110deg, #ffffff 0%, #effaf7 100%) !important; color: #123c36 !important; }
+html[data-theme="light"] .home-owner-cta h2 { color: #123c36 !important; }
+html[data-theme="light"] .home-owner-cta p:not(.section-kicker) { color: #475569 !important; }
+html[data-theme="light"] .home-owner-cta .section-kicker { color: #1c655b !important; }
+html[data-theme="light"] .hero-search { background: #ffffff !important; color: #0f172a !important; }
+/* Common semantic colors used by status messages, badges, tables and forms. */
+html[data-theme="dark"] .text-black { color: #f8fafc !important; }
+html[data-theme="dark"] .text-gray-900, html[data-theme="dark"] .text-gray-800 { color: #f1f5f9 !important; }
+html[data-theme="dark"] .text-gray-700, html[data-theme="dark"] .text-gray-600 { color: #cbd5e1 !important; }
+html[data-theme="dark"] .text-gray-500, html[data-theme="dark"] .text-gray-400 { color: #a8b6c8 !important; }
+html[data-theme="dark"] .bg-gray-50, html[data-theme="dark"] .bg-gray-100 { background-color: #111c2b !important; }
+html[data-theme="dark"] .border-gray-100, html[data-theme="dark"] .border-gray-200, html[data-theme="dark"] .border-gray-300 { border-color: #34445a !important; }
+html[data-theme="dark"] .text-blue-900, html[data-theme="dark"] .text-indigo-900 { color: #dbeafe !important; }
+html[data-theme="dark"] .bg-blue-50, html[data-theme="dark"] .bg-indigo-50 { background-color: #14243b !important; }
+html[data-theme="dark"] .border-blue-200, html[data-theme="dark"] .border-indigo-200 { border-color: #365579 !important; }

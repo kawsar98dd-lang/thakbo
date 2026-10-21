@@ -149,7 +149,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           )}
         </section>
 
-        <Card className="flex flex-wrap items-center justify-between gap-5 border-brand-100 bg-gradient-to-r from-white to-brand-50/70 p-5 sm:p-7">
+        <Card className="home-owner-cta flex flex-wrap items-center justify-between gap-5 border-brand-100 bg-gradient-to-r from-white to-brand-50/70 p-5 sm:p-7">
           <div>
             <p className="section-kicker">For owners & hosts</p>
             <h2 className="mt-1 text-xl font-extrabold tracking-tight sm:text-2xl">Have a place to rent out?</h2>
