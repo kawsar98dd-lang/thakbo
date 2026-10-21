@@ -13,6 +13,7 @@ import type { Route } from "./+types/root";
 import stylesheet from "./app.css?url";
 import { GlobalProgress } from "./components/layout/GlobalProgress";
 import { ToastProvider } from "./components/ui/ToastProvider";
+import { InstallAppPrompt } from "./components/ui/InstallAppPrompt";
 import { RouteError } from "./components/layout/RouteError";
 import { SITE } from "./lib/constants";
 import { canonicalUrl } from "./lib/seo";
@@ -25,6 +26,8 @@ export const middleware: Route.MiddlewareFunction[] = [originCheckMiddleware, se
 export const links: LinksFunction = () => [
   { rel: "stylesheet", href: stylesheet },
   { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
+  { rel: "manifest", href: "/manifest.webmanifest" },
+  { rel: "apple-touch-icon", href: "/icons/icon-192.png" },
 ];
 
 export function loader({ context }: Route.LoaderArgs): RootLoaderData {
@@ -61,6 +64,9 @@ export function Layout({ children }: { children: ReactNode }) {
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <meta name="theme-color" content="#1c655b" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="THAKBO" />
         {root ? <link rel="canonical" href={canonicalUrl(root.siteOrigin, pathname)} /> : null}
         {root ? <meta property="og:url" content={canonicalUrl(root.siteOrigin, pathname)} /> : null}
         {/^(\/(?:dashboard|admin)(?:\/|$)|\/(?:login|register|forgot-password|reset-password)(?:\/|$))/.test(pathname) ? (
@@ -72,6 +78,7 @@ export function Layout({ children }: { children: ReactNode }) {
       <body>
         <ToastProvider>
           <ThemeInitializer />
+          <InstallAppPrompt />
           <GlobalProgress />
           {children}
         </ToastProvider>

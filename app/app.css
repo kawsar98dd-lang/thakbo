@@ -76,7 +76,7 @@
 }
 .theme-toggle:hover { background: #effaf7; border-color: #9fd8c9; }
 .theme-toggle:active { transform: scale(.97); }
-.toast-viewport { position: fixed; z-index: 1000; top: calc(.75rem + env(safe-area-inset-top)); right: max(.75rem, env(safe-area-inset-right)); display: flex; width: min(25rem, calc(100vw - 1.5rem)); flex-direction: column; gap: .65rem; pointer-events: none; }
+.toast-viewport { position: fixed; z-index: 1000; top: 50%; right: max(.75rem, env(safe-area-inset-right)); transform: translateY(-50%); display: flex; width: min(25rem, calc(100vw - 1.5rem)); flex-direction: column; gap: .65rem; pointer-events: none; }
 .toast-card { display: flex; align-items: flex-start; gap: .7rem; padding: .9rem; border: 1px solid; border-radius: 1rem; box-shadow: 0 16px 48px rgb(9 30 27 / 18%); backdrop-filter: blur(16px); pointer-events: auto; animation: toast-in .2s ease-out; }
 .toast-icon { display: grid; width: 2rem; height: 2rem; flex: 0 0 auto; place-items: center; border-radius: .7rem; }
 .toast-close { display: grid; min-width: 2rem; min-height: 2rem; flex: 0 0 auto; place-items: center; border-radius: .6rem; font-size: 1.35rem; line-height: 1; opacity: .75; }
@@ -89,7 +89,7 @@
 .toast-warning .toast-icon { background: #fef3c7; }
 .toast-info { border-color: #a7dcd2; background: rgb(245 255 252 / 97%); color: #164e45; }
 .toast-info .toast-icon { background: #d6f2ea; }
-@keyframes toast-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes toast-in { from { opacity: 0; transform: translateX(12px); } to { opacity: 1; transform: translateX(0); } }
 
 html[data-theme="dark"] { color-scheme: dark; --color-brand-50: #10252b; --color-brand-100: #15343d; --color-brand-200: #1b5260; --color-brand-300: #277d8e; --color-brand-400: #38b9cb; --color-brand-500: #4de3f1; --color-brand-600: #22cde0; --color-brand-700: #16a9c2; --color-brand-800: #14788e; --color-brand-900: #0e5264; }
 html[data-theme="dark"] body { background: #080d16; color: #e5edf7; }
@@ -133,8 +133,9 @@ html[data-theme="dark"] .toast-info { border-color: #225b6d; background: rgb(12 
 html[data-theme="dark"] .toast-info .toast-icon { background: #164e63; }
 html[data-theme="dark"] :focus-visible { outline-color: #67e8f9; }
 @media (max-width: 640px) {
-  .toast-viewport { left: 50%; right: auto; width: calc(100vw - 1.25rem); max-width: 30rem; transform: translateX(-50%); top: calc(.5rem + env(safe-area-inset-top)); }
-  .toast-card { padding: .8rem; border-radius: .9rem; }
+  .toast-viewport { left: max(.65rem, env(safe-area-inset-left)); right: max(.65rem, env(safe-area-inset-right)); width: auto; max-width: 30rem; transform: none; top: auto; bottom: calc(5.6rem + env(safe-area-inset-bottom)); }
+  .toast-card { padding: .8rem; border-radius: .9rem; animation-name: toast-in-mobile; }
+  @keyframes toast-in-mobile { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
   .theme-toggle { min-width: 40px; min-height: 40px; padding: .4rem .6rem; }
 }
 @media (prefers-reduced-motion: reduce) { .toast-card { animation: none; } }
@@ -194,3 +195,47 @@ html[data-theme="dark"] .border-gray-100, html[data-theme="dark"] .border-gray-2
 html[data-theme="dark"] .text-blue-900, html[data-theme="dark"] .text-indigo-900 { color: #dbeafe !important; }
 html[data-theme="dark"] .bg-blue-50, html[data-theme="dark"] .bg-indigo-50 { background-color: #14243b !important; }
 html[data-theme="dark"] .border-blue-200, html[data-theme="dark"] .border-indigo-200 { border-color: #365579 !important; }
+
+
+/* High-contrast semantic states: ensure colored badges stay readable in both themes. */
+html[data-theme="dark"] .bg-accent-100, html[data-theme="dark"] .bg-amber-100, html[data-theme="dark"] .bg-yellow-100 { background-color: #493814 !important; }
+html[data-theme="dark"] .text-amber-800, html[data-theme="dark"] .text-amber-900,
+html[data-theme="dark"] .text-yellow-800, html[data-theme="dark"] .text-yellow-900 { color: #fde68a !important; }
+html[data-theme="dark"] .text-amber-700, html[data-theme="dark"] .text-yellow-700 { color: #fcd34d !important; }
+html[data-theme="dark"] .border-amber-200, html[data-theme="dark"] .border-yellow-200 { border-color: #92702b !important; }
+html[data-theme="dark"] .bg-emerald-100, html[data-theme="dark"] .bg-green-100 { background-color: #123b2c !important; }
+html[data-theme="dark"] .text-emerald-800, html[data-theme="dark"] .text-green-800 { color: #bbf7d0 !important; }
+html[data-theme="dark"] .bg-red-100, html[data-theme="dark"] .bg-rose-100 { background-color: #421d29 !important; }
+html[data-theme="dark"] .text-red-800, html[data-theme="dark"] .text-rose-800 { color: #fecdd3 !important; }
+html[data-theme="dark"] .bg-blue-100, html[data-theme="dark"] .bg-cyan-100 { background-color: #143449 !important; }
+html[data-theme="dark"] .text-blue-800, html[data-theme="dark"] .text-cyan-800 { color: #bae6fd !important; }
+html[data-theme="dark"] .bg-purple-100, html[data-theme="dark"] .bg-violet-100 { background-color: #30204c !important; }
+html[data-theme="dark"] .text-purple-800, html[data-theme="dark"] .text-violet-800 { color: #ddd6fe !important; }
+html[data-theme="dark"] .bg-orange-100 { background-color: #432719 !important; }
+html[data-theme="dark"] .text-orange-800 { color: #fed7aa !important; }
+html[data-theme="dark"] .bg-teal-100 { background-color: #123b3a !important; }
+html[data-theme="dark"] .text-teal-800 { color: #99f6e4 !important; }
+html[data-theme="dark"] .text-white\/80 { color: rgb(255 255 255 / 92%) !important; }
+html[data-theme="dark"] .text-slate-100, html[data-theme="dark"] .text-slate-200 { color: #e2e8f0 !important; }
+html[data-theme="dark"] .bg-yellow-50 { background-color: #2f2715 !important; }
+html[data-theme="dark"] .bg-emerald-50 { background-color: #102c24 !important; }
+html[data-theme="dark"] .bg-purple-50 { background-color: #211932 !important; }
+html[data-theme="dark"] .bg-blue-50 { background-color: #14243b !important; }
+html[data-theme="dark"] .bg-orange-50 { background-color: #2f2017 !important; }
+html[data-theme="dark"] .bg-teal-50 { background-color: #102b2b !important; }
+html[data-theme="dark"] .text-yellow-600, html[data-theme="dark"] .text-amber-600 { color: #fbbf24 !important; }
+html[data-theme="dark"] .text-green-600, html[data-theme="dark"] .text-emerald-600 { color: #4ade80 !important; }
+html[data-theme="dark"] .text-red-600, html[data-theme="dark"] .text-rose-600 { color: #f87171 !important; }
+html[data-theme="dark"] .text-blue-600, html[data-theme="dark"] .text-cyan-600 { color: #67e8f9 !important; }
+html[data-theme="dark"] .text-purple-600, html[data-theme="dark"] .text-violet-600 { color: #c4b5fd !important; }
+html[data-theme="dark"] .text-orange-600 { color: #fdba74 !important; }
+html[data-theme="dark"] .text-teal-600 { color: #5eead4 !important; }
+
+/* PWA install callout is intentionally in-page/side anchored, never a top toast. */
+.pwa-install-card { position: fixed; z-index: 950; right: max(.85rem, env(safe-area-inset-right)); bottom: calc(1rem + env(safe-area-inset-bottom)); width: min(22rem, calc(100vw - 1.7rem)); padding: 1rem; border: 1px solid #b8ded3; border-radius: 1.1rem; background: #ffffff; color: #123c36; box-shadow: 0 18px 50px rgb(15 40 38 / 24%); }
+.pwa-install-card button { min-height: 2.7rem; }
+html[data-theme="dark"] .pwa-install-card { border-color: #2a6674; background: #101827; color: #edf4ff; box-shadow: 0 18px 50px rgb(0 0 0 / 45%); }
+.pwa-install-card .pwa-dismiss { background: transparent; color: inherit; border: 1px solid currentColor; border-radius: .6rem; padding: .4rem .7rem; }
+.pwa-install-card .pwa-install { background: #087f8c; color: white; border-radius: .65rem; padding: .55rem .85rem; font-weight: 700; }
+html[data-theme="dark"] .pwa-install-card .pwa-install { background: #0891b2; color: #fff; }
+@media (max-width: 640px) { .pwa-install-card { bottom: calc(5.5rem + env(safe-area-inset-bottom)); left: .75rem; right: .75rem; width: auto; } }

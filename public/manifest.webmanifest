@@ -1,0 +1,20 @@
+{
+  "id": "/",
+  "name": "THAKBO — Find Where You Belong",
+  "short_name": "THAKBO",
+  "description": "Discover rooms, homes and shared spaces across Bangladesh.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#080d16",
+  "theme_color": "#1c655b",
+  "lang": "en-BD",
+  "categories": ["lifestyle", "travel"] ,
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

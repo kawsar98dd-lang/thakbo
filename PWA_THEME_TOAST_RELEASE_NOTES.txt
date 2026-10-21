@@ -1,0 +1,17 @@
+THAKBO PWA + ACCESSIBLE THEME + SIDE TOAST UPDATE
+
+Included:
+- Web app manifest at public/manifest.webmanifest with standalone display and app icons.
+- Install prompt shown on first visit unless already installed or dismissed for the session. Supports the browser install prompt where available and explains manual installation on iOS/Android otherwise.
+- Service worker registration and conservative static-asset caching only. It intentionally does not cache HTML pages, authenticated account/admin pages, API requests, or personal data.
+- Added PNG app icons in 192px and 512px, including a maskable icon.
+- Toast notifications moved from the top to the right side on larger screens and above the mobile bottom navigation on phones.
+- Expanded dark-theme semantic colour overrides for status badges (including warning/amber), alerts, and other colored Tailwind utilities.
+- Existing route logic, database, authentication, listing flows, moderation, and business logic were not intentionally changed.
+
+IMPORTANT VERIFICATION STATUS:
+- Manifest JSON and service-worker JavaScript syntax should be checked in CI.
+- Full npm typecheck, lint, unit tests and production build must pass before deploying.
+- Test the install flow on Android Chrome and iOS Safari; iOS requires Share > Add to Home Screen.
+- Service workers require HTTPS (Cloudflare Workers HTTPS is suitable).
+- This is not an offline-first app. Dynamic pages are deliberately not cached to avoid stale/private content.
