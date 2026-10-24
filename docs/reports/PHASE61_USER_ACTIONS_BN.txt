@@ -1,0 +1,12 @@
+THAKBO Phase 61 — Lint error fix
+
+আপনার স্ক্রিনশটে দেখা lint error ছিল app/lib/report-text.ts ফাইলে no-control-regex। এখানে regex-টি ইচ্ছাকৃতভাবে control character মুছে দেয়, তাই এর ঠিক আগের লাইনে সীমিত ESLint exception যোগ করা হয়েছে। মূল sanitization behavior বদলানো হয়নি।
+
+করণীয়:
+1. ZIP extract করুন।
+2. রিপোজিটরিতে app/lib/report-text.ts ফাইলটি আপডেট করুন; চাইলে docs/reports-এর রিপোর্টটিও রাখুন।
+3. Commit ও Push করুন।
+4. GitHub → Actions → THAKBO CI থেকে নতুন run-এর ফলাফল দেখুন।
+5. Lint পাস করলেও Unit tests এবং Production build শেষ না হওয়া পর্যন্ত Deploy করবেন না।
+
+নোট: এই পরিবেশে npm dependencies ইনস্টল না থাকায় পূর্ণ ESLint/TypeScript/Test/Build চালানো হয়নি। GitHub Actions-এ নিশ্চিত করতে হবে। Production database বা Cloudflare সেটিংস পরিবর্তন করা হয়নি।
