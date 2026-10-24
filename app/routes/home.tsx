@@ -8,7 +8,7 @@ import { PROPERTY_TYPES, PROPERTY_TYPE_LABELS, SITE } from "~/lib/constants";
 import { ListingCard } from "~/components/listing/ListingCard";
 import { areaPath, PATHS } from "~/lib/routes";
 import { buildMeta } from "~/lib/seo";
-import { serializeJsonLd } from "~/components/seo/Breadcrumbs";
+import { JsonLdScript } from "~/components/seo/Breadcrumbs";
 import { cloudflareContext } from "~/server/context.server";
 import { listActiveAreas, listActiveCities, type Area, type City } from "~/server/db/repositories/locations";
 import { searchListings, type ListingCard as ListingCardData } from "~/server/db/repositories/listings";
@@ -74,7 +74,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   const { cities, popular, recentListings, hasMoreListings } = loaderData;
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(websiteStructuredData) }} />
+      <JsonLdScript data={websiteStructuredData} />
       <section className="relative -mt-6 isolate overflow-hidden bg-gradient-to-br from-[#123c36] via-brand-800 to-[#247b6c] py-12 text-white sm:-mt-8 sm:py-16 lg:py-20">
         <div aria-hidden="true" className="pointer-events-none absolute -right-24 -top-24 -z-10 size-80 rounded-full border border-white/10 bg-white/[0.03] sm:size-[28rem]" />
         <div aria-hidden="true" className="pointer-events-none absolute -bottom-36 left-[42%] -z-10 size-96 rounded-full border border-white/10" />

@@ -20,7 +20,11 @@ export function serializeJsonLd(value: unknown): string {
     .replace(/\u2029/g, "\\u2029");
 }
 
-/* eslint-disable no-restricted-syntax -- The JSON-LD script below uses safely serialized schema data. */
+/* eslint-disable no-restricted-syntax -- JSON-LD requires a script text node; serializeJsonLd safely escapes HTML-sensitive characters. */
+export function JsonLdScript({ data }: { data: unknown }) {
+  return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(data) }} />;
+}
+
 export function Breadcrumbs({ items }: { items: BreadcrumbItem[] }) {
   if (items.length < 2) return null;
 
@@ -51,7 +55,7 @@ export function Breadcrumbs({ items }: { items: BreadcrumbItem[] }) {
           ))}
         </ol>
       </nav>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(structuredData) }} />
+      <JsonLdScript data={structuredData} />
     </>
   );
 }
