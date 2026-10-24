@@ -29,7 +29,7 @@ describe("listing search SQL builder", () => {
     const term = "room'; DROP TABLE listings;--";
     const { sql, params } = build(`q=${encodeURIComponent(term)}`);
     expect(sql).toContain("l.title LIKE ?");
-    expect(sql).toContain("COALESCE(l.description, ) LIKE ?");
+    expect(sql).toContain("COALESCE(l.description, '') LIKE ?");
     expect(sql).not.toContain("DROP TABLE");
     expect(params).toContain(`%${term}%`);
     expect((sql.match(/\?/g) ?? []).length).toBe(params.length);

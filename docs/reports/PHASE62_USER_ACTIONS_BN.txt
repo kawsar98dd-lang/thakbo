@@ -1,0 +1,15 @@
+THAKBO Phase 62 — করণীয় (বাংলা)
+
+সমস্যা: GitHub Actions-এর Unit tests ধাপে ১টি পরীক্ষা ব্যর্থ হয়েছে।
+কারণ: tests/server.test.ts-এ SQL-এর প্রত্যাশিত লেখায় COALESCE(l.description, '')-এর দুইটি single quote বাদ ছিল। অ্যাপের SQL builder-এ এই অংশটি সঠিক আছে; পরীক্ষার assertion ভুল ছিল।
+
+এই ZIP-এ tests/server.test.ts-এর assertion ঠিক করা হয়েছে।
+
+আপনি যা করবেন:
+1. ZIP খুলুন।
+2. প্রজেক্টের tests/server.test.ts ফাইলটি রিপোজিটরির একই ফাইল দিয়ে প্রতিস্থাপন করুন।
+3. Commit ও Push করুন।
+4. GitHub → Actions → THAKBO CI-তে নতুন রান দেখুন।
+5. Unit tests ও Production build পাস না করা পর্যন্ত লাইভ Deploy করবেন না।
+
+নোট: এই পরিবেশে npm dependencies না থাকায় Vitest এখানে চালানো হয়নি। তাই GitHub Actions-এ পুনরায় নিশ্চিত করতে হবে। কোনো secret বা database ID পরিবর্তন করবেন না।
