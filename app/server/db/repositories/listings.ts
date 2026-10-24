@@ -57,6 +57,15 @@ export interface ListingDetail extends ListingCard {
   availableFrom: string | null;
 }
 
+/** Internal analytics helper: resolve the database ID without exposing it in public listing loader data. */
+export function getPublishedListingIdBySlug(db: D1Database, slug: string): Promise<string | null> {
+  return queryFirst<{ id: string }>(
+    db,
+    "SELECT id FROM listings WHERE slug = ? AND status = 'published'",
+    [slug],
+  ).then((row) => row?.id ?? null);
+}
+
 /** Public detail page: only published listings are visible by slug. Exact address and coordinates stay private. */
 export function getPublishedListingBySlug(db: D1Database, slug: string): Promise<ListingDetail | null> {
   return queryFirst<ListingDetail>(

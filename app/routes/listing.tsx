@@ -14,7 +14,7 @@ import { areaPath, cityPath, listingImagePath, PATHS } from "~/lib/routes";
 import { buildMeta } from "~/lib/seo";
 import { slugParam } from "~/lib/validation/common";
 import { cloudflareContext, currentUserContext } from "~/server/context.server";
-import { getPublishedListingBySlug } from "~/server/db/repositories/listings";
+import { getPublishedListingBySlug, getPublishedListingIdBySlug } from "~/server/db/repositories/listings";
 import { getPublicListingExtras, isListingFavorite, isPublishedListingOwner, submitListingReport, toggleListingFavorite } from "~/server/db/repositories/engagement";
 import { notFound } from "~/server/errors.server";
 import { requireUser } from "~/server/session.server";
@@ -31,11 +31,15 @@ export async function loader({ params, context, request }: Route.LoaderArgs) {
   const { env } = context.get(cloudflareContext);
   const listing = await getPublishedListingBySlug(env.DB, slug.data);
   if (!listing) throw notFound();
-  const analyticsHeaders = await trackPageView(env.DB, request, `listing:${listing.id}`, "listing", listing.id);
+  // Resolve the internal database ID separately so it is not exposed in public loader data.
+  const analyticsListingId = await getPublishedListingIdBySlug(env.DB, slug.data);
+  const analyticsHeaders = analyticsListingId
+    ? await trackPageView(env.DB, request, `listing:${analyticsListingId}`, "listing", analyticsListingId)
+    : new Headers();
   const [extras, user, viewCount] = await Promise.all([
     getPublicListingExtras(env.DB, slug.data),
     Promise.resolve(context.get(currentUserContext)),
-    getListingViewCount(env.DB, listing.id),
+    analyticsListingId ? getListingViewCount(env.DB, analyticsListingId) : Promise.resolve(0),
   ]);
   const [favorite, isOwner] = user
     ? await Promise.all([
