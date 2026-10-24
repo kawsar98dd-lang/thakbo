@@ -75,6 +75,14 @@ export function getPublishedListingBySlug(db: D1Database, slug: string): Promise
   );
 }
 
+
+/** Internal published listing id for server-side analytics only; never include this in public loader data. */
+export async function getPublishedListingIdBySlug(db: D1Database, slug: string): Promise<string | null> {
+  const row = await queryFirst<{ id: string }>(db,
+    "SELECT id FROM listings WHERE slug = ? AND status = 'published' LIMIT 1", [slug]);
+  return row?.id ?? null;
+}
+
 /** Public listing slugs for sitemap.xml. Never expose drafts, pending, paused, rejected or deleted listings. */
 export function listPublishedListingSlugs(db: D1Database, limit: number = 50_000): Promise<Array<{ slug: string }>> {
   const safeLimit = Number.isFinite(limit) ? Math.max(0, Math.min(50_001, Math.floor(limit))) : 50_000;

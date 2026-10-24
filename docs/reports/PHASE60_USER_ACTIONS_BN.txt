@@ -1,0 +1,12 @@
+THAKBO Phase 60 — করণীয় (বাংলা)
+
+১) এই ZIP-টি extract করুন।
+২) আগের একই GitHub repository-র ফাইলগুলোর সঙ্গে এই আপডেটেড সোর্স ব্যবহার করুন।
+৩) GitHub Actions-এ গিয়ে THAKBO CI workflow আবার চালান (অথবা নতুন commit push হলে চলা workflow খুলুন)।
+৪) Type-check ধাপ সফল হয়েছে কি না দেখুন। তারপর Lint, Unit tests এবং Production build ধাপগুলোর ফলাফল দেখুন।
+৫) কোনো ধাপ ব্যর্থ হলে সম্পূর্ণ error log বা screenshot পাঠান।
+
+গুরুত্বপূর্ণ:
+- এই ZIP নিজে থেকে GitHub-এ আপলোড বা লাইভ সাইটে deploy করে না।
+- Production D1 database-এ migration চালাবেন না।
+- Node.js-এর পূর্ণ CI পরীক্ষা এই পরিবেশে চালানো হয়নি; GitHub Actions-এর ফলাফলই পরবর্তী নিশ্চিতকরণ।

@@ -4,10 +4,11 @@ import { Icon } from "./Icon";
 import { useEffect } from "react";
 import { useToast } from "./ToastProvider";
 
-type Tone = "info" | "error" | "success";
+type Tone = "info" | "warning" | "error" | "success";
 
 const TONES: Record<Tone, string> = {
   info: "border-brand-200 bg-brand-50 text-brand-900",
+  warning: "border-amber-300 bg-amber-50 text-amber-950",
   error: "border-red-200 bg-red-50 text-red-900",
   success: "border-green-200 bg-green-50 text-green-900",
 };
