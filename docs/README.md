@@ -9,3 +9,5 @@
 
 - [THAKBO_CI_FIX_REPORT.txt](THAKBO_CI_FIX_REPORT.txt)
 - [THAKBO_UPDATE_REPORT.txt](THAKBO_UPDATE_REPORT.txt)
+
+- [Phase 45 — Bengali On-page SEO](reports/phase-45-bengali-on-page-seo.md)

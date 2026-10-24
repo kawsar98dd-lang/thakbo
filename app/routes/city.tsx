@@ -30,8 +30,8 @@ export function meta({ loaderData }: Route.MetaArgs) {
   if (!loaderData) return buildMeta({ title: "City not found", description: "This city is not available.", noindex: true });
   const { city, listings } = loaderData;
   return buildMeta({
-    title: `Places to rent in ${city.name}`,
-    description: `Browse published mess seats, rooms, flats, houses and sublets in ${city.name}. Compare places by area and monthly rent.`,
+    title: `${city.name}-এ বাসা ভাড়া, রুম ও মেস`,
+    description: `${city.name}-এ বাসা ভাড়া, রুম ভাড়া, ফ্ল্যাট, সাবলেট ও মেসের প্রকাশিত লিস্টিং দেখুন। এলাকা ও মাসিক ভাড়া তুলনা করে আপনার প্রয়োজনের থাকার জায়গা খুঁজুন। Browse published accommodation in ${city.name}, Bangladesh.`,
     noindex: listings.length === 0,
   });
 }
@@ -43,7 +43,7 @@ export default function CityPage({ loaderData }: Route.ComponentProps) {
       <Breadcrumbs items={[{ label: "Home", path: "/" }, { label: city.name }]} />
       <PageHeader
         title={`Places to rent in ${city.name}`}
-        description={`Explore published accommodation in ${city.name}. Browse by neighbourhood or compare the latest available listings below.`}
+        description={`${city.name}-এ বাসা ভাড়া, রুম ভাড়া ও মেসের প্রকাশিত লিস্টিং দেখুন। Explore published accommodation by neighbourhood and compare monthly rent.`}
       />
       {areas.length > 0 ? (
         <section aria-labelledby="city-areas-heading" className="mb-8">

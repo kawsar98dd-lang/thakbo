@@ -12,7 +12,10 @@ export interface PageMeta {
 }
 
 export function formatTitle(title: string): string {
-  return title === SITE.name ? `${SITE.name} — ${SITE.tagline}` : `${title} | ${SITE.name}`;
+  if (title === SITE.name) return `${SITE.name} — ${SITE.tagline}`;
+  // Allow a carefully composed bilingual homepage title without appending the brand twice.
+  if (title.startsWith("THAKBO (") || title.includes(SITE.nameBn)) return title;
+  return `${title} | ${SITE.name}`;
 }
 
 /** Builds title/description/Open Graph tags. The canonical URL is added once, in root.tsx. */
@@ -25,6 +28,8 @@ export function buildMeta({ title, description, noindex = false, image, imageAlt
     { property: "og:description", content: description },
     { property: "og:type", content: "website" },
     { property: "og:site_name", content: SITE.name },
+    { property: "og:locale", content: "bn_BD" },
+    { property: "og:locale:alternate", content: "en_BD" },
     { name: "twitter:card", content: image ? "summary_large_image" : "summary" },
   ];
   if (image) {

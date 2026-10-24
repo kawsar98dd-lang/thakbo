@@ -11,7 +11,7 @@ import { validateContactMessage } from "~/lib/validation/contact-message";
 import { cloudflareContext } from "~/server/context.server";
 import { execute, queryFirst } from "~/server/db/client";
 
-export const meta = () => buildMeta({ title: "Contact", description: "Contact the THAKBO team about your account, listing or experience." });
+export const meta = () => buildMeta({ title: "যোগাযোগ | THAKBO", description: "THAKBO (থাকবো)-এর অ্যাকাউন্ট, বাসা ভাড়া বা রুমের লিস্টিং, অথবা ওয়েবসাইট ব্যবহারের বিষয়ে যোগাযোগ করুন। Contact the THAKBO team about your account, listing or experience." });
 
 type FormState = { ok: boolean; message: string; values?: { name: string; email: string; subject: string; message: string } };
 

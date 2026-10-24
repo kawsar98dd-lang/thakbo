@@ -16,7 +16,9 @@ It starts in **Rajshahi** but is built for many cities. One account lets a perso
 
 ## SEO canonical origin and sitemap policy
 
-`app/lib/constants.ts` defines `SITE.canonicalOrigin` as the one production origin used for canonical links, `og:url`, `robots.txt`, and `sitemap.xml`. It currently points to `https://thakbo.kawsar98dd.workers.dev`, the live address documented for this project. If THAKBO later moves to a verified custom domain, update this value in one place before deployment. City and area URLs are included in the sitemap only when they have at least one published listing; individual listing URLs are included only while their status is `published`. Account, dashboard, and admin routes are not blocked in `robots.txt`, so crawlers can follow redirects and see `noindex` metadata where the response permits it; `/api/` is disallowed. `robots.txt` is not an access-control mechanism.
+`app/lib/constants.ts` defines `SITE.canonicalOrigin` as the one production origin used for canonical links, `og:url`, `robots.txt`, and `sitemap.xml`. It currently points to `https://thakbo.eu.cc`, the intended public launch domain. If the public domain changes later, update this value in one place before deployment. City and area URLs are included in the sitemap only when they have at least one published listing; individual listing URLs are included only while their status is `published`. Account, dashboard, and admin routes are not blocked in `robots.txt`, so crawlers can follow redirects and see `noindex` metadata where the response permits it; `/api/` is disallowed. `robots.txt` is not an access-control mechanism.
+
+The latest on-page SEO phase adds Bengali explanatory copy to About/How it works, improves Bengali/English metadata on public contact/location/listing pages, and records the work in `docs/reports/phase-45-bengali-on-page-seo.md`. These changes do not replace CI, Preview, Search Console, or live-domain verification.
 
 ## বাংলায় সংক্ষেপে
 * আপনার কম্পিউটারে কিছু চালাতে হবে না। প্রজেক্ট GitHub-এ আপলোড করলে **GitHub Actions** নিজে ক্লাউডে সব যাচাই করবে।
@@ -205,7 +207,7 @@ It refuses to continue (and changes nothing) when the database **already has tab
 1. Make sure `package-lock.json` is in the repository (it is, from the lockfile helper) and the files of this update are on `main`.
 2. *Actions* → **THAKBO Initialize Production D1** → *Run workflow* → branch `main`, **mode = `check`** → *Run*. This is read-only: it shows the state and what would be applied.
 3. If the check is green and says `Database state : fresh` (or `tracked`), run it again with **mode = `apply`** and type **`THAKBO-DB`** in the confirmation box.
-4. Green check = done. Open `https://thakbo.kawsar98dd.workers.dev/api/health` to confirm the app reaches the database.
+4. Green check = done. Open `https://thakbo.eu.cc/api/health` to confirm the app reaches the database.
 
 ### Expected verification results (fresh database, after `apply`)
 | Check | Expected |
@@ -387,6 +389,6 @@ Password reset uses Better Auth's built-in one-time reset token flow and Resend 
 
 - `RESEND_API_KEY` — a Resend API key with sending permission, stored as a Worker secret.
 - `RESEND_FROM_EMAIL` — optional sender address, e.g. `THAKBO <noreply@trustedtoolsweb.com>`. The domain in this address must be verified in Resend.
-- `BETTER_AUTH_URL` — optional; set this to the exact public THAKBO origin if Better Auth does not detect it correctly (currently `https://thakbo.kawsar98dd.workers.dev`).
+- `BETTER_AUTH_URL` — optional; set this to the exact public THAKBO origin if Better Auth does not detect it correctly (currently `https://thakbo.eu.cc`).
 
 The password-reset token expires after one hour, and other sessions are configured to be revoked after a successful password reset. The reset request page returns a generic success message to avoid disclosing whether an email address is registered. Test with an account whose mailbox you control before enabling this feature for production users. Do not share the Resend API key in chat, screenshots, or source control.

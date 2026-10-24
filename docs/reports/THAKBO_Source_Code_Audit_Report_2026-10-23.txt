@@ -1,0 +1,45 @@
+THAKBO SOURCE CODE AUDIT REPORT
+Date: 2026-10-23
+Audited archive: THAKBO_PWA_Theme_Toast_Accessibility_Lint_Fix.zip
+SHA-256 of audited archive: 7ef53679744631eab6362dcf24dd1124394ea7aeb6c893304a8b00ddaa51acec
+
+1. SCOPE
+- Inspected project structure, package.json/package-lock.json, ESLint flat config, GitHub Actions CI workflow, public/sw.js, manifest.webmanifest, theme toggle/initializer, toast provider, install prompt, key CSS, and repository verification scripts.
+- Did not modify project source files.
+- Did not deploy to Cloudflare or access the production database/account.
+
+2. CHECKS THAT PASSED
+- CI workflow consistency checker: passed.
+- CI workflow checker tests: 4 passed.
+- SQL migration + seed verification: passed; 11 migrations applied to temporary SQLite verification DB; 22 tables reported.
+- Security configuration audit: 0 repository-config blockers. Manual Cloudflare/GitHub secret and resource checks remain necessary.
+- Security configuration tests: 4 passed.
+- Preview configuration tests: 7 passed.
+- R2 storage tools tests: 6 passed.
+- Production D1 tooling tests: 49 passed.
+- PWA static assets referenced by the manifest/service worker are present in the ZIP (favicon, manifest, three icon files).
+- Service worker source is intentionally limited to same-origin GET requests and exact listed static asset paths; it explicitly excludes admin/dashboard/API/auth paths and does not cache HTML or private responses.
+
+3. NOT VERIFIED / BLOCKED
+- npm ci was attempted twice but timed out in this audit environment; node_modules was not fully installed.
+- The environment's Node.js is v22.16.0, but the project requires Node >=22.22.0 (.nvmrc specifies 22.22.0). This mismatch means this environment cannot provide a valid production-quality result for the Node checks.
+- Consequently, npm run typecheck, npm run lint, npm test, and npm run build were NOT run successfully here. Do not treat this audit as proof that the GitHub Actions workflow is green.
+- Live website, real Cloudflare bindings, production D1/R2 separation, actual installability, and mobile/desktop visual behavior were not tested.
+
+4. FINDINGS / RECOMMENDATIONS
+A. ESLint service-worker override exists in eslint.config.js and includes globals.serviceworker, which is aimed at fixing the prior public/sw.js undefined browser globals. It still needs a real ESLint run on the required Node version to confirm the fix.
+B. The theme is initialized in a React useEffect after hydration. This can briefly display the default/light theme before the saved/preferred theme is applied. Low priority; consider a safe pre-hydration initializer only if verified against the current SSR/CSP setup.
+C. The install card is shown to eligible non-standalone visitors even before a native beforeinstallprompt event exists; in that case its action is “How to install.” Dismissal is session-scoped, so it may reappear in a later session. This is a UX choice, not a confirmed functional defect.
+D. The service worker cache list and manifest icon paths exist in the archive. Confirm the icon artwork and install experience on real Android Chrome/iOS Safari during Preview testing.
+E. The security audit only checks repository configuration. The script itself explicitly says it cannot prove production/Preview configuration, secret-store values, or deployed behavior.
+
+5. RELEASE RECOMMENDATION
+Status: PARTIALLY AUDITED — NOT YET RELEASE-VERIFIED.
+The Python/SQLite repository checks passed. Do not deploy this ZIP to production solely on the basis of this report. First run the repository's GitHub Actions CI with Node 22.22.0 (and npm 11.19.1 as specified in CI), confirm type-check, lint, unit tests, and build all pass, then test a Cloudflare Preview deployment before production.
+
+6. NEXT STEPS
+1. Upload/commit this exact source to a branch or use the existing GitHub repository workflow.
+2. Run GitHub Actions “THAKBO CI” on the exact commit.
+3. If any step fails, fix only the reported issue and rerun the full workflow.
+4. Preview-test login, listing/search, admin routes, uploads, reports, theme toggle, toast placement, PWA prompt/install, and confirm private/admin/API responses are not cached.
+5. Deploy production only after Preview passes and a backup/rollback path is ready.

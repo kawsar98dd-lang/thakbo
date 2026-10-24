@@ -5,9 +5,9 @@ export const SITE = {
   nameBn: "থাকবো",
   tagline: "Find Where You Belong.",
   /** Canonical production origin; update this single value if THAKBO moves to a custom domain. */
-  canonicalOrigin: "https://thakbo.kawsar98dd.workers.dev",
+  canonicalOrigin: "https://thakbo.eu.cc",
   description:
-    "THAKBO helps you discover mess, rooms, flats, houses and sublets around the place you want to live in Bangladesh.",
+    "বাংলাদেশে বাসা ভাড়া, রুম ভাড়া ও মেস খুঁজুন THAKBO-তে। শহর ও এলাকার ভিত্তিতে প্রকাশিত লিস্টিং দেখুন। Find rooms, flats, houses and mess accommodation across Bangladesh.",
 } as const;
 
 export const PROPERTY_TYPES = ["mess", "mess_seat", "room", "house", "flat", "sublet"] as const;

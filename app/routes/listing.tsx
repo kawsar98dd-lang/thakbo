@@ -76,8 +76,8 @@ export function meta({ loaderData }: Route.MetaArgs) {
   const { listing } = loaderData;
   const image = listing.coverImageId ? `${SITE.canonicalOrigin}${listingImagePath(listing.coverImageId)}` : undefined;
   return buildMeta({
-    title: listing.title,
-    description: `${PROPERTY_TYPE_LABELS[listing.propertyType]} in ${listing.areaName}, ${listing.cityName}. Monthly rent: ${formatTaka(listing.rentAmount)}. ${AVAILABILITY_LABELS[listing.availabilityStatus]}.`,
+    title: `${listing.title} — ${listing.areaName}, ${listing.cityName}`,
+    description: `${PROPERTY_TYPE_LABELS[listing.propertyType]} for rent in ${listing.areaName}, ${listing.cityName}. ${listing.areaName}, ${listing.cityName}-এ ${PROPERTY_TYPE_LABELS[listing.propertyType]} ভাড়া। Monthly rent: ${formatTaka(listing.rentAmount)}. ${AVAILABILITY_LABELS[listing.availabilityStatus]}.`,
     image,
     imageAlt: image ? `Photo of ${listing.title}` : undefined,
   });

@@ -8,13 +8,27 @@ import { PROPERTY_TYPES, PROPERTY_TYPE_LABELS, SITE } from "~/lib/constants";
 import { ListingCard } from "~/components/listing/ListingCard";
 import { areaPath, PATHS } from "~/lib/routes";
 import { buildMeta } from "~/lib/seo";
+import { serializeJsonLd } from "~/components/seo/Breadcrumbs";
 import { cloudflareContext } from "~/server/context.server";
 import { listActiveAreas, listActiveCities, type Area, type City } from "~/server/db/repositories/locations";
 import { searchListings, type ListingCard as ListingCardData } from "~/server/db/repositories/listings";
 import { parseSearchParams } from "~/lib/validation/search";
 import { logger } from "~/server/logger.server";
 
-export const meta = () => buildMeta({ title: SITE.name, description: SITE.description });
+export const meta = () => buildMeta({
+  title: "THAKBO (থাকবো) | বাংলাদেশে বাসা, রুম ও মেস ভাড়া খুঁজুন",
+  description: SITE.description,
+});
+
+const websiteStructuredData = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "THAKBO",
+  alternateName: "থাকবো",
+  url: `${SITE.canonicalOrigin}/`,
+  description: SITE.description,
+  inLanguage: ["bn-BD", "en-BD"],
+};
 
 interface PopularPlace {
   city: City;
@@ -60,6 +74,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   const { cities, popular, recentListings, hasMoreListings } = loaderData;
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(websiteStructuredData) }} />
       <section className="relative -mt-6 isolate overflow-hidden bg-gradient-to-br from-[#123c36] via-brand-800 to-[#247b6c] py-12 text-white sm:-mt-8 sm:py-16 lg:py-20">
         <div aria-hidden="true" className="pointer-events-none absolute -right-24 -top-24 -z-10 size-80 rounded-full border border-white/10 bg-white/[0.03] sm:size-[28rem]" />
         <div aria-hidden="true" className="pointer-events-none absolute -bottom-36 left-[42%] -z-10 size-96 rounded-full border border-white/10" />
@@ -69,6 +84,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           </p>
           <h1 className="mt-3 max-w-3xl text-3xl font-extrabold leading-[1.12] tracking-tight sm:text-5xl lg:text-6xl">{SITE.tagline}</h1>
           <p className="mt-4 max-w-xl text-base leading-7 text-brand-100 sm:text-lg">Find a place to live near where you want to be. Explore rooms, homes and shared spaces across Bangladesh.</p>
+          <p lang="bn" className="mt-2 max-w-xl text-sm leading-6 text-white/90 sm:text-base">বাংলাদেশে বাসা ভাড়া, রুম ভাড়া বা মেস খুঁজুন—শহর ও এলাকার ভিত্তিতে প্রকাশিত লিস্টিং দেখুন।</p>
           <div className="mt-5 flex flex-wrap gap-2 text-xs font-semibold text-white/90 sm:text-sm"><span className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5">⌖ Location-first discovery</span><span className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5">✓ Reviewed listings</span><span className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5">♡ Save your favourites</span></div>
           <Form
             method="get"

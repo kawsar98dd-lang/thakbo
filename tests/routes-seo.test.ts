@@ -24,8 +24,14 @@ describe("pageFromRequestUrl", () => {
 
 describe("seo", () => {
   it("uses one configured production origin for canonical URLs", () => {
-    expect(SITE.canonicalOrigin).toBe("https://thakbo.kawsar98dd.workers.dev");
-    expect(canonicalUrl(SITE.canonicalOrigin, "/city/rajshahi")).toBe("https://thakbo.kawsar98dd.workers.dev/city/rajshahi");
+    expect(SITE.canonicalOrigin).toBe("https://thakbo.eu.cc");
+    expect(canonicalUrl(SITE.canonicalOrigin, "/city/rajshahi")).toBe("https://thakbo.eu.cc/city/rajshahi");
+  });
+  it("uses the THAKBO launch domain and bilingual metadata without duplicate brand suffix", () => {
+    expect(SITE.canonicalOrigin).toBe("https://thakbo.eu.cc");
+    expect(buildMeta({ title: "THAKBO (থাকবো) | বাংলাদেশে বাসা, রুম ও মেস ভাড়া খুঁজুন", description: "বাংলাদেশে বাসা ভাড়া" }))
+      .toContainEqual({ title: "THAKBO (থাকবো) | বাংলাদেশে বাসা, রুম ও মেস ভাড়া খুঁজুন" });
+    expect(buildMeta({ title: "T", description: "D" })).toContainEqual({ property: "og:locale", content: "bn_BD" });
   });
   it("canonical URL drops the query string and trailing slash", () => {
     expect(canonicalUrl("https://x.test", "/search/")).toBe("https://x.test/search");

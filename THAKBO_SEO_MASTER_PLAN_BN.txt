@@ -1,0 +1,85 @@
+THAKBO (থাকবো) — SEO MASTER PLAN ও IMPLEMENTATION CHECKLIST
+বর্তমান পছন্দের ডোমেইন: https://thakbo.eu.cc/
+প্রজেক্ট: বাংলাদেশে বাসা, রুম, ফ্ল্যাট, মেস ও সাবলেট খোঁজার প্ল্যাটফর্ম
+
+গুরুত্বপূর্ণ
+এই পরিকল্পনা সার্চ ইঞ্জিনে সাইটের সঠিক বোঝাপড়া, crawlability এবং organic visibility উন্নত করার জন্য। কোনো SEO কাজই Google-এ নির্দিষ্ট অবস্থান, ট্রাফিক বা নির্দিষ্ট সময়ের মধ্যে ranking নিশ্চিত করে না। নতুন ডোমেইন চালু হলে DNS/HTTPS, canonical, internal links, sitemap, Search Console এবং authentication callback—সব সঠিকভাবে মিলিয়ে নিতে হবে।
+
+১. এই রিলিজে কোডে করা SEO উন্নয়ন
+- SITE.canonicalOrigin এখন https://thakbo.eu.cc — canonical, og:url, sitemap, robots.txt এবং breadcrumb structured data একই origin ব্যবহার করে।
+- Homepage title: THAKBO (থাকবো) | বাংলাদেশে বাসা, রুম ও মেস ভাড়া খুঁজুন
+- Homepage meta description-এ বাংলা ও ইংরেজি—দুই ভাষায় সাইটের প্রকৃত উদ্দেশ্য ব্যাখ্যা করা হয়েছে।
+- Homepage-এ দৃশ্যমান বাংলা সহায়ক বাক্য যোগ করা হয়েছে; বিদ্যমান ইংরেজি H1 ও মূল UI রাখা হয়েছে।
+- Homepage-এ WebSite JSON-LD যোগ করা হয়েছে; JSON-LD নিরাপদভাবে serialize করা হয়।
+- City/area page title ও description-এ স্বাভাবিক বাংলা rental-intent শব্দের সঙ্গে অবস্থান এবং ইংরেজি ব্যাখ্যা রাখা হয়েছে।
+- Public listing-এর title, area, city, property type, rent ও availability থেকে পৃথক metadata তৈরি হয়।
+- Open Graph locale bn_BD এবং alternate en_BD যোগ করা হয়েছে।
+- Sitemap-এ public static pages, active location-এ published listing থাকা city/area, এবং published listing-এর URL অন্তর্ভুক্ত হয়। Draft, pending, rejected, paused/deleted listing sitemap query-তে প্রকাশ করা হয় না।
+- Search/filter URL-এর canonical query string বাদ দেয়; search page noindex থাকে।
+- Dashboard, admin, login, registration ও password-reset page noindex রাখার বিদ্যমান ব্যবস্থা বজায় রাখা হয়েছে।
+- Homepage-এর duplicate Recent places to rent H2 থাকলে duplicate heading সরানো হয়েছে; layout/feature বদলানো হয়নি।
+
+২. Live deployment-এর আগে আবশ্যিক কাজ
+[ ] https://thakbo.eu.cc/ HTTPS-এ খোলে এবং certificate valid।
+[ ] Cloudflare-এ thakbo.eu.cc-এর DNS/Custom Domain সঠিক Worker-এ যুক্ত।
+[ ] /robots.txt খুলে Sitemap লাইনটি https://thakbo.eu.cc/sitemap.xml দেখায়।
+[ ] /sitemap.xml valid XML দেয় এবং সব URL thakbo.eu.cc দিয়ে শুরু হয়।
+[ ] Homepage HTML-এ একটিমাত্র canonical URL: https://thakbo.eu.cc/।
+[ ] একটি published listing-এর canonical, title, description ও og:image সঠিক।
+[ ] Draft/pending/private/admin/account পেজ public sitemap-এ নেই এবং noindex/authorization ঠিক আছে।
+[ ] Cloudflare Production Environment-এর BETTER_AUTH_URL (যদি সেট করা থাকে), trusted origins এবং authentication/reset-email callback URL-এ নতুন domain সঠিকভাবে সেট করা।
+[ ] পুরোনো domain থেকে নতুন domain-এ redirect দরকার হলে প্রতিটি সমতুল্য URL-এর জন্য প্রাসঙ্গিক 301 redirect পরিকল্পনা করা। অপ্রাসঙ্গিক সব URL homepage-এ redirect করবেন না।
+[ ] Search Console-এ https://thakbo.eu.cc/ domain/URL-prefix property verify করা।
+[ ] Search Console-এর Sitemaps অংশে https://thakbo.eu.cc/sitemap.xml জমা দেওয়া।
+[ ] Homepage ও অন্তত একটি published listing URL Inspection দিয়ে পরীক্ষা করা।
+
+৩. কনটেন্ট ও On-page SEO
+- Homepage-এ বাসা ভাড়া, রুম ভাড়া, মেস ভাড়া, শহর/এলাকা দিয়ে খোঁজার উপযোগিতা স্বাভাবিকভাবে উল্লেখ করুন।
+- প্রতিটি published listing-এর নিজস্ব title, বাস্তব বিবরণ, সঠিক rent/availability এবং অর্থবহ image alt text থাকা উচিত।
+- City/area page-এ বাস্তব published listing না থাকলে পেজ index করানোর জন্য জোর করবেন না; কোড বর্তমানে listing না থাকলে noindex করে।
+- শুধু keyword বদলে অসংখ্য পাতলা/একই রকম location page তৈরি করবেন না।
+- ব্যবহারকারীর দেওয়া listing content moderation-এর মাধ্যমে যাচাই করুন; ভুয়া listing ও spam কমানো SEO এবং ব্যবহারকারীর আস্থার জন্য গুরুত্বপূর্ণ।
+- Contact, About, Privacy, Terms, Safety এবং Report Listing-এর মতো বিশ্বাসযোগ্যতার পেজগুলো সহজে খুঁজে পাওয়া যায় কি না যাচাই করুন।
+
+৪. Technical SEO
+- Canonical URL-এ query parameters রাখা হবে না; slash/no-slash URL একই canonical-এ যাবে।
+- Sitemap-এ কেবল canonical ও index করার উপযোগী public URL রাখা হবে।
+- robots.txt crawl নির্দেশনা দেয়, কিন্তু এটি private data সুরক্ষার ব্যবস্থা নয়; server-side authorization অপরিহার্য।
+- Structured data কেবল পেজে বাস্তবে থাকা তথ্যের জন্য ব্যবহার করতে হবে। ভুয়া rating/review/price যোগ করা যাবে না।
+- ছবি compress, সঠিক dimension, lazy loading ও Core Web Vitals পর্যালোচনা করুন।
+- broken link, redirect chain, 404/5xx এবং mobile usability নিয়মিত পরীক্ষা করুন।
+- Google Search Console-এর Pages, Performance, Manual actions ও Security issues রিপোর্ট নিয়মিত দেখুন।
+
+৫. নতুন ডোমেইনে যাওয়ার সতর্কতা
+এই ZIP-এর code-level canonical origin thakbo.eu.cc-এ পরিবর্তিত হয়েছে। কিন্তু ZIP আপডেট করলেই DNS, SSL, Cloudflare custom-domain binding, production secrets, Better Auth callback, Search Console বা পুরোনো ডোমেইনের redirect নিজে থেকে পরিবর্তিত হবে না। Deploy-এর আগে Cloudflare Preview/পরীক্ষামূলক পরিবেশে যাচাই করুন। Production-এ সরাসরি পরিবর্তনের আগে বর্তমান সোর্সের ব্যাকআপ রাখুন।
+
+৬. Regression Test — UI/ফিচার অক্ষত আছে কি না
+[ ] Homepage এবং Recent Listings Feed
+[ ] Registration/login/logout
+[ ] Listing draft/save/submit এবং admin approval
+[ ] Public listing details, image display/upload
+[ ] Search ও location filter
+[ ] Favorites, reports ও contact inbox
+[ ] Forgot/reset password email flow
+[ ] Dashboard/Admin authorization
+[ ] D1/R2 bindings
+[ ] Mobile/desktop layout, Light/Dark theme, toast এবং PWA install
+[ ] robots.txt, sitemap.xml, canonical ও metadata
+
+৭. Phase 45-এ করা অতিরিক্ত On-page SEO কাজ
+- About, How it works, Contact, City, Area এবং public Listing metadata-এর ভাষা ও search intent উন্নত করা হয়েছে।
+- How it works পেজে বিদ্যমান ইংরেজি নির্দেশনার নিচে বাংলা নির্দেশনা যোগ করা হয়েছে।
+- এই পরিবর্তনে Database, Authentication, listing workflow, route structure বা Cloudflare binding পরিবর্তন করা হয়নি।
+- পূর্ণ CI ও live deployment verification এখনো আবশ্যক। বিস্তারিত: docs/reports/phase-45-bengali-on-page-seo.md
+
+৮. এই আপডেটে যা যাচাই করা হয়নি
+এই প্যাকেজ তৈরির পরিবেশে সম্পূর্ণ npm ci, semantic TypeScript check, ESLint, Vitest suite, production build, Cloudflare Preview/Production, browser-based rendering এবং Google Search Console চালানো হয়নি। নিচের রিপোর্টে শুধুমাত্র বাস্তবে করা static checks উল্লেখ থাকবে। Live deployment-এর আগে GitHub Actions-এ পূর্ণ CI সফল হওয়া আবশ্যক।
+
+৯. অফিসিয়াল Google নির্দেশিকা
+SEO Starter Guide: https://developers.google.com/search/docs/fundamentals/seo-starter-guide
+Sitemaps: https://developers.google.com/search/docs/crawling-indexing/sitemaps/overview
+Robots.txt: https://developers.google.com/search/docs/crawling-indexing/robots/intro
+Core Web Vitals: https://developers.google.com/search/docs/appearance/core-web-vitals
+Site move / URL changes: https://developers.google.com/search/docs/crawling-indexing/site-move-with-url-changes
+
+Phase 45 report: docs/reports/phase-45-bengali-on-page-seo.md

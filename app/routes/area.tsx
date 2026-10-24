@@ -30,8 +30,8 @@ export function meta({ loaderData }: Route.MetaArgs) {
   if (!loaderData) return buildMeta({ title: "Area not found", description: "This area is not available.", noindex: true });
   const { city, area, listings } = loaderData;
   return buildMeta({
-    title: `Places to rent in ${area.name}, ${city.name}`,
-    description: `Browse published mess seats, rooms, flats, houses and sublets in ${area.name}, ${city.name}. Compare places and monthly rent.`,
+    title: `${area.name}, ${city.name}-এ বাসা ভাড়া ও রুম`,
+    description: `${area.name}, ${city.name}-এ বাসা ভাড়া, রুম, ফ্ল্যাট, সাবলেট ও মেসের প্রকাশিত লিস্টিং দেখুন। মাসিক ভাড়া ও থাকার জায়গার তথ্য তুলনা করুন। Browse published accommodation in this area.`,
     noindex: listings.length === 0,
   });
 }
@@ -43,7 +43,7 @@ export default function AreaPage({ loaderData }: Route.ComponentProps) {
       <Breadcrumbs items={[{ label: "Home", path: "/" }, { label: city.name, path: cityPath(city.slug) }, { label: area.name }]} />
       <PageHeader
         title={`${area.name}, ${city.name}`}
-        description={`Explore published accommodation in ${area.name}, ${city.name}. Compare listings and monthly rent, or browse other areas in ${city.name}.`}
+        description={`${area.name}, ${city.name}-এ বাসা ভাড়া, রুম ভাড়া ও মেসের প্রকাশিত লিস্টিং দেখুন। Compare listings and monthly rent, or browse other areas in ${city.name}.`}
       />
       <div className="mb-8 flex flex-wrap gap-3">
         <Link className={buttonClasses("primary")} to={`/search?city=${encodeURIComponent(city.slug)}&area=${encodeURIComponent(area.slug)}`}>
