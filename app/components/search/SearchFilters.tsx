@@ -50,6 +50,7 @@ export function SearchFilters({ cities, facilities, values, areaInput, areaSearc
   return (
     <Form method="get" action="/search" className="space-y-4 rounded-xl border border-slate-200 bg-white p-4">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <TextField label="Keyword" name="q" defaultValue={values.query ?? ""} placeholder="e.g. student room / শিক্ষার্থী" hint="Search title, description, city or area." />
         <SelectField label="City" name="city" defaultValue={values.city ?? ""} placeholder="Any city" options={cities.map((city) => ({ value: city.slug, label: city.nameBn ? `${city.nameBn} · ${city.name}` : city.name }))} />
         <div>
           <TextField label="Area / neighbourhood" name="area" defaultValue={areaInput ?? values.area ?? ""} placeholder="e.g. Hatem Khan / হেতেম খান" autoComplete="off" />
@@ -73,10 +74,10 @@ export function SearchFilters({ cities, facilities, values, areaInput, areaSearc
         <div className="mt-3 space-y-2">
           <label htmlFor="searchLocationLink" className="block text-sm font-medium text-slate-800">Or paste a full Google Maps link</label>
           <div className="flex flex-col gap-2 sm:flex-row">
-            <input id="searchLocationLink" type="text" inputMode="url" autoComplete="off" value={locationLink} onChange={(event) => setLocationLink(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); handleMapLink(); } }} placeholder="https://www.google.com/maps/…" className="min-h-11 min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 text-base text-slate-900 placeholder:text-slate-400" />
+            <input id="searchLocationLink" type="text" inputMode="url" autoComplete="off" aria-describedby="searchLocationLink-help" value={locationLink} onChange={(event) => setLocationLink(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); handleMapLink(); } }} placeholder="https://www.google.com/maps/…" className="min-h-11 min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 text-base text-slate-900 placeholder:text-slate-400" />
             <Button type="button" variant="secondary" onClick={handleMapLink}>Use map link</Button>
           </div>
-          <p className="text-xs text-slate-500">Short links may not contain readable coordinates. Open them in Maps and copy the full link instead.</p>
+          <p id="searchLocationLink-help" className="text-xs text-slate-500">Short links may not contain readable coordinates. Open them in Maps and copy the full link instead.</p>
         </div>
         {geoMessage ? <p role="status" aria-live="polite" className="mt-2 text-sm text-slate-700">{geoMessage}</p> : null}
         <div className="mt-3 grid gap-3 sm:grid-cols-3">

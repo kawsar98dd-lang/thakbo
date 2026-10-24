@@ -1,0 +1,19 @@
+THAKBO — Phase 58: GitHub CI চালানোর সহজ নির্দেশনা
+
+এই ZIP-এ Phase 58-এর কাজ হলো আসল GitHub CI যাচাইয়ের জন্য নিরাপদ হ্যান্ডঅফ তৈরি করা। আমি আপনার GitHub Actions-এ লগইন করে রান চালাইনি, তাই CI পাস করেছে বলে দাবি করছি না।
+
+আপনার করণীয়:
+1) GitHub-এ kawsar98dd-lang/thakbo রিপোজিটরি খুলুন।
+2) উপরের Actions ট্যাবে যান।
+3) বাম পাশের workflow তালিকা থেকে “THAKBO CI” নির্বাচন করুন।
+4) “Run workflow” বোতাম থাকলে সেটি চাপুন, branch হিসেবে আপনার বর্তমান কাজের branch নির্বাচন করুন, তারপর “Run workflow” নিশ্চিত করুন।
+5) নতুন রানটি খুলে শেষ হওয়া পর্যন্ত অপেক্ষা করুন।
+6) সব required ধাপ সবুজ হলে screenshot পাঠান। বিশেষ করে Type-check, Lint, Unit tests, Production build ধাপগুলো দেখাবেন।
+7) কোনো ধাপ লাল হলে প্রথম ব্যর্থ ধাপটি খুলে error-সহ screenshot দিন অথবা error text কপি করে পাঠান। কোনো secret/token/password থাকলে আগে মুছে দেবেন।
+
+সতর্কতা:
+- এই পর্যায়ে Cloudflare-এ Deploy করবেন না।
+- Production database migration চালাবেন না।
+- .env, Cloudflare API token, database password, session cookie বা secret value কাউকে পাঠাবেন না।
+- “Cloudflare Worker dry run (informational)” ধাপটি non-blocking; এটি ব্যর্থ হলেও CI job সবুজ হতে পারে। তবে ফলাফলটি আলাদাভাবে পর্যালোচনা করতে হবে।
+- CI সবুজ হলেই production binding/secret ঠিক আছে বা live site পুরোপুরি পরীক্ষা হয়েছে—এমন নয়। পরের ধাপ হবে Preview-only smoke test।

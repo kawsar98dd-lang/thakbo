@@ -14,6 +14,7 @@ import { buildMeta } from "~/lib/seo";
 import { uuidParam } from "~/lib/validation/common";
 import { cloudflareContext } from "~/server/context.server";
 import { listOwnedListings } from "~/server/db/repositories/listings";
+import { getListingViewCounts } from "~/server/analytics/analytics.server";
 import { deleteOwnedListing, moveListingToDraft } from "~/server/listing-service.server";
 import { requireUser } from "~/server/session.server";
 
@@ -36,7 +37,15 @@ const STATUS_TONE: Record<ListingStatus, "neutral" | "brand" | "warning" | "dang
 export async function loader({ context, request }: Route.LoaderArgs) {
   const user = requireUser(context, request);
   const { env } = context.get(cloudflareContext);
-  return { listings: await listOwnedListings(env.DB, user.id) };
+  const listings = await listOwnedListings(env.DB, user.id);
+  const publishedIds = listings.filter((listing) => listing.status === "published").map((listing) => listing.id);
+  const viewCounts = await getListingViewCounts(env.DB, publishedIds);
+  const withViews = listings.map((listing) => ({
+    ...listing,
+    // Do not expose view counts for drafts, pending, rejected, paused, or deleted listings.
+    viewCount: listing.status === "published" ? viewCounts.get(listing.id) ?? 0 : null,
+  }));
+  return { listings: withViews };
 }
 
 /**
@@ -76,6 +85,17 @@ const STATUS_HELP: Partial<Record<ListingStatus, string>> = {
   published: "Live. Editing it takes it offline until it is approved again.",
   paused: "Hidden from visitors. Edit and resubmit it to publish again.",
 };
+
+/** A reminder only: never changes listing visibility or status automatically. */
+function getFreshnessReminder(status: ListingStatus, updatedAt: string): string | null {
+  if (status !== "published") return null;
+  const updated = Date.parse(updatedAt);
+  if (!Number.isFinite(updated)) return null;
+  const ageDays = Math.floor(Math.max(0, Date.now() - updated) / 86_400_000);
+  if (ageDays >= 30) return `Last updated ${ageDays} days ago. Please review the rent, location, photos, and availability to keep this listing accurate.`;
+  if (ageDays >= 14) return `Last updated ${ageDays} days ago. Consider checking that the rent and availability are still correct.`;
+  return null;
+}
 
 export default function MyListings({ loaderData, actionData }: Route.ComponentProps) {
   const { listings } = loaderData;
@@ -124,6 +144,12 @@ export default function MyListings({ loaderData, actionData }: Route.ComponentPr
                   </Alert>
                 ) : null}
                 {STATUS_HELP[listing.status] ? <p className="text-sm text-slate-700">{STATUS_HELP[listing.status]}</p> : null}
+                {getFreshnessReminder(listing.status, listing.updatedAt) ? (
+                  <Alert tone="warning" title="Keep this listing up to date">
+                    {getFreshnessReminder(listing.status, listing.updatedAt)}
+                  </Alert>
+                ) : null}
+                {listing.viewCount !== null ? <p className="text-sm text-slate-700">👁 {listing.viewCount} tracked views</p> : null}
                 <p className="text-xs text-slate-600">Updated {listing.updatedAt.slice(0, 10)}</p>
                 <div className="flex flex-wrap gap-2 pt-1">
                   <ButtonLink to={editListingPath(listing.id)} variant="secondary">

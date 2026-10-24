@@ -59,6 +59,12 @@ export function buildListingSearchQuery(search: SearchParams): BuiltQuery {
     where.push("a.slug = ?");
     params.push(search.area);
   }
+  if (search.query) {
+    // Search only public-facing text/location fields; parameter binding prevents SQL injection.
+    const term = `%${search.query}%`;
+    where.push("(l.title LIKE ? OR COALESCE(l.description, '') LIKE ? OR c.name LIKE ? OR a.name LIKE ?)");
+    params.push(term, term, term, term);
+  }
   if (search.types.length > 0) {
     where.push(`l.property_type IN (${placeholders(search.types.length)})`);
     params.push(...search.types);

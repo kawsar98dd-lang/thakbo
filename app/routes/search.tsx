@@ -52,6 +52,7 @@ function pageHref(search: SearchParams, page: number): string {
   const params = new URLSearchParams();
   if (search.city) params.set("city", search.city);
   if (search.area) params.set("area", search.area);
+  if (search.query) params.set("q", search.query);
   for (const t of search.types) params.append("type", t);
   for (const a of search.audiences) params.append("audience", a);
   if (search.minPrice !== undefined) params.set("min_price", String(search.minPrice));

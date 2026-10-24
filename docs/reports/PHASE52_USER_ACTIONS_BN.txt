@@ -1,0 +1,7 @@
+THAKBO Phase 52 — মোবাইল UX ও Accessibility
+
+এই ধাপে Search-এর Google Maps link ইনপুটের সঙ্গে তার নির্দেশনামূলক লেখার সংযোগ যোগ করা হয়েছে, যাতে screen reader ব্যবহারকারীরা ইনপুটের সহায়ক তথ্য সহজে শুনতে পারেন।
+
+পর্যালোচনায় দেখা গেছে: Skip to main content লিংক, দৃশ্যমান keyboard focus, reduced-motion support, TextField-এর label/hint/error সংযোগ, SelectField-এর label/error সংযোগ, CheckboxGroup-এর fieldset/legend, location status announcement এবং Listing ছবির alt text ইতিমধ্যে আছে।
+
+এখনও পূর্ণ TypeScript, ESLint, Vitest ও production build চালানো হয়নি। তাই ZIP-টি এখনই GitHub/Production-এ deploy করবেন না; সব Phase শেষে CI ও Preview যাচাই করা হবে। কোনো Database Migration বা Production Database পরিবর্তন করা হয়নি।

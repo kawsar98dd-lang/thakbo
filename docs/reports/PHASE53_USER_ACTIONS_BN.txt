@@ -1,0 +1,14 @@
+THAKBO Phase 53 — বাংলা নির্দেশনা
+
+এই ZIP-এ robots.txt-এর crawler guidance সামান্য উন্নত করা হয়েছে। আপাতত GitHub-এ আপলোড বা Cloudflare-এ Deploy করবেন না; সব Phase শেষে পূর্ণ CI যাচাইয়ের পরিকল্পনা অনুযায়ী এগোব।
+
+পরিবর্তন:
+- /api/, /admin, /dashboard এবং login/register/password-reset/logout paths robots.txt-এ Disallow করা হয়েছে।
+- Sitemap URL আগের মতো SITE.canonicalOrigin থেকে তৈরি হয়।
+- robots.txt নিরাপত্তার বিকল্প নয়; server-side login/authorization আগের মতোই থাকতে হবে।
+
+যাচাই হয়নি:
+- TypeScript, ESLint, Vitest ও Production Build
+- Live robots.txt, sitemap, canonical tags, Google Search Console ও PageSpeed
+
+ডোমেইন বদলালে app/lib/constants.ts-এ SITE.canonicalOrigin আপডেট এবং সব canonical/sitemap URL যাচাই করতে হবে।

@@ -1,0 +1,16 @@
+THAKBO Phase 56 — ব্যবহারকারীর জন্য নির্দেশনা
+
+এই ZIP-এ robots.txt সংক্রান্ত একটি Regression Fix করা হয়েছে। আগের কোডে robots.txt থেকে /admin, /dashboard, /login, /register ইত্যাদি ব্লক করা হচ্ছিল, কিন্তু বিদ্যমান SEO test অনুযায়ী এগুলো ব্লক করা উচিত নয়; এসব পেজে noindex metadata আছে। robots.txt নিরাপত্তার ব্যবস্থা নয়। আসল নিরাপত্তা server-side authorization থেকে আসে।
+
+এই পরিবর্তনে শুধু /api/ disallow রাখা হয়েছে এবং Sitemap URL রাখা হয়েছে। কোনো Production Database, Secret, Cloudflare deployment বা GitHub repository পরিবর্তন করা হয়নি।
+
+পরবর্তী করণীয়:
+1. ZIP সংরক্ষণ করুন।
+2. এখনই Production-এ Deploy করবেন না।
+3. নির্ধারিত সময়ে GitHub Actions-এর THAKBO CI চালান।
+4. Typecheck, Lint, Vitest এবং Build সব সফল হওয়ার পর Preview-তে পরীক্ষা করুন।
+
+পরীক্ষার অবস্থা:
+- SQL migration/seed verification: PASS
+- Node/Vitest/TypeScript/ESLint/Build: এই পরিবেশে চালানো হয়নি
+- Live SEO / Search Console: পরীক্ষা করা হয়নি

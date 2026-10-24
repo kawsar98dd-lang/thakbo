@@ -1,0 +1,11 @@
+THAKBO Phase 49 — বাংলা হ্যান্ডঅফ
+
+এই আপডেটে Search পেজে Keyword ফিল্টার যোগ করা হয়েছে। এখন শিরোনাম, বিবরণ, শহর বা এলাকার নাম দিয়ে খোঁজা যাবে। পুরোনো ফিল্টারগুলোও থাকবে। সার্চ ইনপুট SQL parameter দিয়ে পাঠানো হয় এবং শুধু published লিস্টিং সার্চে আসে। কোনো database migration দরকার নেই।
+
+গুরুত্বপূর্ণ অবস্থা:
+- GitHub-এ Push করা হয়নি।
+- Cloudflare-এ Deploy করা হয়নি।
+- Production database পরিবর্তন করা হয়নি।
+- TypeScript, Lint, Test ও Build শেষ পর্যন্ত চালানো হয়নি; এগুলো শেষ CI ধাপে করা হবে, ব্যবহারকারীর নির্দেশ অনুযায়ী।
+
+পরবর্তী যাচাই: CI শেষে Preview-তে keyword search, filter combination এবং pagination পরীক্ষা করতে হবে।

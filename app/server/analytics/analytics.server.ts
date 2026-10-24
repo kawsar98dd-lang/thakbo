@@ -92,6 +92,32 @@ export async function getListingViewCount(db: D1Database, listingId: string): Pr
   }
 }
 
+/** Fetches owner-visible listing counts in bounded batches instead of one query per listing. */
+export async function getListingViewCounts(db: D1Database, listingIds: string[]): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  const uniqueIds = [...new Set(listingIds)];
+  for (const id of uniqueIds) counts.set(id, 0);
+  if (uniqueIds.length === 0) return counts;
+
+  try {
+    // Keep below conservative SQLite/D1 bind-variable limits, even for owners with many listings.
+    for (let offset = 0; offset < uniqueIds.length; offset += 100) {
+      const batch = uniqueIds.slice(offset, offset + 100);
+      const placeholders = batch.map(() => "?").join(", ");
+      const rows = await queryAll<{ listingId: string; total: number }>(db,
+        `SELECT listing_id AS listingId, COALESCE(SUM(view_count), 0) AS total
+         FROM analytics_daily_views
+         WHERE page_type = 'listing' AND listing_id IN (${placeholders})
+         GROUP BY listing_id`, batch);
+      for (const row of rows) counts.set(row.listingId, row.total);
+    }
+  } catch (error) {
+    logger.warn("batched listing analytics unavailable", { error });
+    // Return zero counts on failure, matching getListingViewCount's graceful fallback.
+  }
+  return counts;
+}
+
 export async function getAdminAnalytics(db: D1Database) {
   const summary = await queryFirst<{ allViews: number; listingViews: number; todayViews: number; last7Days: number; last30Days: number }>(db,
     `SELECT

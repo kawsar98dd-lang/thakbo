@@ -1,0 +1,23 @@
+THAKBO — Phase 57: পরবর্তী করণীয় (বাংলা)
+
+এই ZIP-এ Final Integration & CI Preparation Audit রিপোর্ট যোগ করা হয়েছে। কোনো Live Deploy, GitHub Push, Cloudflare পরিবর্তন বা Database Migration চালানো হয়নি।
+
+যে পরীক্ষাগুলো সত্যিই চালানো হয়েছে:
+- CI workflow consistency check: সফল
+- CI checker tests: ৪টি সফল
+- SQLite migration/seed verification: সফল (মাইগ্রেশন 0000–0011; ২৪টি টেবিল রিপোর্ট)
+- Security configuration tests: ৪টি সফল
+- Production DB tooling offline tests: ৪৯টি সফল
+- Preview configuration tests: ৭টি সফল
+- Storage tools tests: ৬টি সফল
+- Security configuration audit: কোনো static blocker পাওয়া যায়নি
+
+এগুলো মিলিয়ে Python test suite-এ ৭০টি test সফল হয়েছে। তবে Node.js/TypeScript/ESLint/Vitest/Build চালানো হয়নি। এই পরিবেশে Node 22.16.0 আছে, কিন্তু প্রজেক্ট চায় Node 22.22.0; node_modules-ও নেই।
+
+রিলিজের আগে অবশ্যই:
+১) GitHub Actions-এ THAKBO CI চালিয়ে সব ধাপের ফলাফল দেখুন।
+২) Wrangler production D1 database_id অনুপস্থিত—Cloudflare-এ সঠিক Production database ID নিশ্চিত না করে সেট করবেন না এবং Preview ID কখনো Production-এ ব্যবহার করবেন না।
+৩) Secrets ও Production/Preview D1/R2 আলাদা আছে কি না Cloudflare-এ যাচাই করুন।
+৪) CI সফল হলে আগে Preview-তে পরীক্ষা করুন; সরাসরি Live-এ নয়।
+
+গুরুত্বপূর্ণ: এই রিপোর্ট Live সাইট বা Cloudflare account-কে যাচাই করেছে—এমন দাবি করে না।

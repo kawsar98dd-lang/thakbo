@@ -13,8 +13,9 @@ import { normalizeContactNumber } from "~/lib/contact";
 import { areaPath, cityPath, listingImagePath, PATHS } from "~/lib/routes";
 import { buildMeta } from "~/lib/seo";
 import { slugParam } from "~/lib/validation/common";
+import { normalizeReportText } from "~/lib/report-text";
 import { cloudflareContext, currentUserContext } from "~/server/context.server";
-import { getPublishedListingBySlug, getPublishedListingIdBySlug } from "~/server/db/repositories/listings";
+import { getPublishedListingBySlug } from "~/server/db/repositories/listings";
 import { getPublicListingExtras, isListingFavorite, isPublishedListingOwner, submitListingReport, toggleListingFavorite } from "~/server/db/repositories/engagement";
 import { notFound } from "~/server/errors.server";
 import { requireUser } from "~/server/session.server";
@@ -31,15 +32,11 @@ export async function loader({ params, context, request }: Route.LoaderArgs) {
   const { env } = context.get(cloudflareContext);
   const listing = await getPublishedListingBySlug(env.DB, slug.data);
   if (!listing) throw notFound();
-  // Resolve the internal database ID separately so it is not exposed in public loader data.
-  const analyticsListingId = await getPublishedListingIdBySlug(env.DB, slug.data);
-  const analyticsHeaders = analyticsListingId
-    ? await trackPageView(env.DB, request, `listing:${analyticsListingId}`, "listing", analyticsListingId)
-    : new Headers();
+  const analyticsHeaders = await trackPageView(env.DB, request, `listing:${listing.id}`, "listing", listing.id);
   const [extras, user, viewCount] = await Promise.all([
     getPublicListingExtras(env.DB, slug.data),
     Promise.resolve(context.get(currentUserContext)),
-    analyticsListingId ? getListingViewCount(env.DB, analyticsListingId) : Promise.resolve(0),
+    getListingViewCount(env.DB, listing.id),
   ]);
   const [favorite, isOwner] = user
     ? await Promise.all([
@@ -65,7 +62,7 @@ export async function action({ params, context, request }: Route.ActionArgs) {
     const rawReason = form.get("reason");
     const rawDetails = form.get("details");
     const reason = typeof rawReason === "string" && (REPORT_REASONS as readonly string[]).includes(rawReason) ? rawReason as ReportReason : null;
-    const details = typeof rawDetails === "string" ? rawDetails.trim() : "";
+    const details = typeof rawDetails === "string" ? normalizeReportText(rawDetails) : "";
     if (!reason || details.length > 1000) {
       return data({ report: "error" as const, message: "Choose a report reason and keep details under 1,000 characters." }, { status: 400 });
     }

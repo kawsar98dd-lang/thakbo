@@ -29,5 +29,3 @@ THAKBO Phase 47 — আপনার করণীয়
 - পূর্ণ npm check (dependency install timeout হয়েছে)
 
 কোনো API key, password, Cloudflare token বা `.env` ফাইল চ্যাটে পাঠাবেন না।
-
-অতিরিক্ত CI precheck (2026-10-24): verify-ci-workflow.py, verify-ci-workflow-test.py (৪), verify-sql.py, production_db_test.py (৪৯), storage_tools_test.py (৬), check-preview-config-test.py (৭), check-security-config-test.py (৪), security strict audit এবং analytics SQL smoke test সফল। তবে npm registry DNS error (EAI_AGAIN) হওয়ায় npm ci সম্পন্ন হয়নি; ফলে TypeScript, ESLint, Vitest এবং build এখনো সফলভাবে চালানো হয়নি। পূর্ণ CI GitHub Actions-এ চালানো আবশ্যক। বিস্তারিত: docs/reports/phase-47-ci-precheck-2026-10-24.md

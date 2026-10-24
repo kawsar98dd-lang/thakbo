@@ -20,9 +20,8 @@ export function serializeJsonLd(value: unknown): string {
     .replace(/\u2029/g, "\\u2029");
 }
 
+/* eslint-disable no-restricted-syntax -- JSON-LD requires a script text node; serializeJsonLd safely escapes HTML-sensitive characters. */
 export function JsonLdScript({ data }: { data: unknown }) {
-  // This is the single audited exception: serializeJsonLd escapes HTML-sensitive characters before insertion.
-  // eslint-disable-next-line no-restricted-syntax -- Safe JSON-LD script output requires a script text node.
   return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(data) }} />;
 }
 
@@ -60,3 +59,4 @@ export function Breadcrumbs({ items }: { items: BreadcrumbItem[] }) {
     </>
   );
 }
+/* eslint-enable no-restricted-syntax */

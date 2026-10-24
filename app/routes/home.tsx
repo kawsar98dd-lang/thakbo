@@ -168,7 +168,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           )}
         </section>
 
-        <section aria-labelledby="public-statistics-heading" className="rounded-3xl border border-brand-100 bg-gradient-to-br from-brand-50 via-white to-white p-5 shadow-sm sm:p-7">
+        <section aria-labelledby="public-statistics-heading" className="home-analytics-panel rounded-3xl border border-brand-100 bg-gradient-to-br from-brand-50 via-white to-white p-5 shadow-sm sm:p-7">
           <p className="section-kicker">THAKBO in numbers</p>
           <h2 id="public-statistics-heading" className="mt-1 text-xl font-extrabold tracking-tight sm:text-2xl">Our growing community</h2>
           <p className="mt-1 text-sm text-slate-600">Real page-view statistics recorded by THAKBO. Automated bots are excluded where detectable.</p>

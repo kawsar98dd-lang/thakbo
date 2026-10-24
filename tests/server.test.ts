@@ -25,6 +25,15 @@ describe("listing search SQL builder", () => {
     expect((sql.match(/\?/g) ?? []).length).toBe(params.length);
     expect(params.slice(-2)).toEqual([21, 40]);
   });
+  it("adds keyword filters using bound parameters only", () => {
+    const term = "room'; DROP TABLE listings;--";
+    const { sql, params } = build(`q=${encodeURIComponent(term)}`);
+    expect(sql).toContain("l.title LIKE ?");
+    expect(sql).toContain("COALESCE(l.description, ) LIKE ?");
+    expect(sql).not.toContain("DROP TABLE");
+    expect(params).toContain(`%${term}%`);
+    expect((sql.match(/\?/g) ?? []).length).toBe(params.length);
+  });
   it("uses a fixed ORDER BY for each sort option", () => {
     expect(build("sort=price_asc").sql).toContain("ORDER BY l.rent_amount ASC");
     expect(build("sort=nonsense").sql).toContain("ORDER BY l.published_at DESC");

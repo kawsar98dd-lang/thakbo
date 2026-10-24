@@ -1,0 +1,17 @@
+THAKBO — Phase 54: Performance & Reliability
+
+এই ZIP-এ মালিকের Dashboard-এর analytics query কমানোর একটি সীমিত পরিবর্তন আছে। কোনো ডেটাবেস migration নেই এবং লাইভ সাইটে কোনো পরিবর্তন করা হয়নি।
+
+কী পরিবর্তন হয়েছে:
+- Dashboard এবং My Listings পেজে প্রতিটি প্রকাশিত listing-এর view count আলাদা query করে আনার বদলে একাধিক listing-এর count একসঙ্গে আনা হয়।
+- ১০০টি ID করে batch করা হয়েছে।
+- Draft, pending, rejected, paused বা deleted listing-এর view count দেখানোর নিয়ম বদলায়নি।
+- UI, login, moderation এবং public listing-এর আচরণ পরিবর্তনের উদ্দেশ্য নেই।
+
+আপনার এখনকার করণীয়:
+1. ZIP-টি সংরক্ষণ করুন।
+2. এখনই GitHub-এ push বা Cloudflare-এ deploy করবেন না।
+3. সব Phase শেষ হলে সঠিক Node.js 22.22.0 বা তার উপযুক্ত সংস্করণে পূর্ণ CI চালাব।
+
+পরীক্ষার সীমাবদ্ধতা:
+পূর্ণ TypeScript, ESLint, Vitest, production build এবং runtime পরীক্ষা এই ধাপে চালানো হয়নি। তাই ZIP-টিকে এখনই production-ready ধরে নেবেন না।

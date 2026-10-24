@@ -1,0 +1,12 @@
+THAKBO Phase 48 — মালিকের Listing View Analytics
+
+এই আপডেটে:
+1. লগইন করা মালিক Dashboard-এ নিজের প্রকাশিত listing-গুলোর মোট tracked views দেখতে পারবেন।
+2. My listings পেজে প্রকাশিত listing-এর view count দেখা যাবে।
+3. Draft/Pending/Rejected/Paused/Deleted listing-এর view count দেখানো হবে না।
+4. নতুন database migration নেই। Phase 47-এর analytics migration (0011_visitor_analytics.sql) আগে থেকেই Production D1-এ থাকা দরকার।
+
+নিরাপত্তা ও যাচাই:
+- শুধু নিজের listing-এর count দেখানোর জন্য existing owner-scoped query ব্যবহার করা হয়েছে।
+- কোনো Cloudflare deploy, Production database write বা GitHub push করা হয়নি।
+- পূর্ণ TypeScript/Lint/Test/Build এখনো চালানো হয়নি; npm dependency install আগের পরিবেশে timeout হয়েছিল। CI সফল না হওয়া পর্যন্ত main branch-এ merge/deploy করবেন না।

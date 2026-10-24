@@ -7,6 +7,7 @@ import { Button } from "~/components/ui/Button";
 import { Card } from "~/components/ui/Card";
 import { EmptyState } from "~/components/ui/EmptyState";
 import { REPORT_STATUSES, type ReportStatus } from "~/lib/constants";
+import { normalizeReportText } from "~/lib/report-text";
 import { cloudflareContext } from "~/server/context.server";
 import { listAdminReportsPage, updateAdminReport } from "~/server/db/repositories/admin-console";
 import { requireAdmin } from "~/server/session.server";
@@ -29,7 +30,7 @@ export async function action({ context, request }: Route.ActionArgs) {
   if (typeof id !== "string" || id.length < 1 || id.length > 100 || typeof rawStatus !== "string" || !REPORT_STATUSES.includes(rawStatus as ReportStatus)) {
     return data({ ok: false, message: "Invalid report update." }, { status: 400 });
   }
-  const note = typeof rawNote === "string" ? rawNote.trim() : "";
+  const note = typeof rawNote === "string" ? normalizeReportText(rawNote) : "";
   if (note.length > 1000) return data({ ok: false, message: "Admin note must be 1,000 characters or fewer." }, { status: 400 });
   const ok = await updateAdminReport(env.DB, id, rawStatus as ReportStatus, note || null);
   return data({ ok, message: ok ? "Report updated." : "Report not found." }, { status: ok ? 200 : 404 });

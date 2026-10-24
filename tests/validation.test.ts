@@ -31,6 +31,8 @@ describe("search URL parsing", () => {
     expect(s).toMatchObject({ city: "rajshahi", types: ["mess"], audiences: ["student"], maxPrice: 5000, page: 1, sort: "newest" });
     expect(sp("city=rajshahi&area=talaimari")).toMatchObject({ city: "rajshahi", area: "talaimari" });
     expect(sp("city=rajshahi&area=Hatem%20Khan")).toMatchObject({ city: "rajshahi", area: "Hatem Khan" });
+    expect(sp("q=student%20room")).toMatchObject({ query: "student room" });
+    expect(sp(`q=${"x".repeat(101)}`).query).toBeUndefined();
     expect(sp("area=").area).toBeUndefined();
   });
   it("ignores invalid values instead of failing", () => {

@@ -239,3 +239,51 @@ html[data-theme="dark"] .pwa-install-card { border-color: #2a6674; background: #
 .pwa-install-card .pwa-install { background: #087f8c; color: white; border-radius: .65rem; padding: .55rem .85rem; font-weight: 700; }
 html[data-theme="dark"] .pwa-install-card .pwa-install { background: #0891b2; color: #fff; }
 @media (max-width: 640px) { .pwa-install-card { bottom: calc(5.5rem + env(safe-area-inset-bottom)); left: .75rem; right: .75rem; width: auto; } }
+
+
+/* Phase 59: theme contrast hardening for gradient panels and remaining semantic utilities.
+   Keep the home hero intentionally dark; normalize content panels only. */
+html[data-theme="dark"] .home-analytics-panel {
+  background: linear-gradient(135deg, #101827 0%, #111c2b 55%, #0c1421 100%) !important;
+  border-color: #2a394d !important;
+  color: #edf4ff !important;
+}
+html[data-theme="dark"] .home-analytics-panel h2 { color: #f1f5f9 !important; }
+html[data-theme="dark"] .home-analytics-panel p:not(.section-kicker) { color: #cbd5e1 !important; }
+html[data-theme="dark"] .home-analytics-panel dl > div {
+  background: #0b1320 !important; border-color: #34445a !important;
+}
+html[data-theme="dark"] .home-analytics-panel dt { color: #cbd5e1 !important; }
+html[data-theme="dark"] .home-analytics-panel dd { color: #67e8f9 !important; }
+html[data-theme="light"] .home-analytics-panel {
+  background: linear-gradient(135deg, #effaf7 0%, #ffffff 58%, #f8fafc 100%) !important;
+  color: #0f172a !important; border-color: #cfe7df !important;
+}
+html[data-theme="light"] .home-analytics-panel h2 { color: #0f172a !important; }
+html[data-theme="light"] .home-analytics-panel p:not(.section-kicker) { color: #475569 !important; }
+html[data-theme="light"] .home-analytics-panel dl > div { background: #ffffff !important; border-color: #e2e8f0 !important; }
+html[data-theme="light"] .home-analytics-panel dt { color: #475569 !important; }
+html[data-theme="light"] .home-analytics-panel dd { color: #1c655b !important; }
+
+/* Dark mode: prevent white gradient stops and common gray utilities from washing out panels. */
+html[data-theme="dark"] .bg-gradient-to-br.from-white,
+html[data-theme="dark"] .bg-gradient-to-br.via-white,
+html[data-theme="dark"] .bg-gradient-to-br.to-white,
+html[data-theme="dark"] .bg-gradient-to-r.from-white,
+html[data-theme="dark"] .bg-gradient-to-r.to-white,
+html[data-theme="dark"] .bg-gradient-to-br.from-brand-50,
+html[data-theme="dark"] .bg-gradient-to-r.from-brand-50 {
+  --tw-gradient-from: #101827 var(--tw-gradient-from-position) !important;
+  --tw-gradient-via: #111c2b var(--tw-gradient-via-position) !important;
+  --tw-gradient-to: #0c1421 var(--tw-gradient-to-position) !important;
+}
+html[data-theme="dark"] .text-gray-950, html[data-theme="dark"] .text-gray-900,
+html[data-theme="dark"] .text-neutral-950, html[data-theme="dark"] .text-neutral-900 { color: #f1f5f9 !important; }
+html[data-theme="dark"] .text-gray-800, html[data-theme="dark"] .text-neutral-800 { color: #e2e8f0 !important; }
+html[data-theme="dark"] .text-gray-700, html[data-theme="dark"] .text-gray-600,
+html[data-theme="dark"] .text-neutral-700, html[data-theme="dark"] .text-neutral-600 { color: #cbd5e1 !important; }
+html[data-theme="dark"] .text-gray-500, html[data-theme="dark"] .text-neutral-500 { color: #a8b6c8 !important; }
+html[data-theme="dark"] .bg-neutral-50, html[data-theme="dark"] .bg-neutral-100 { background-color: #111c2b !important; }
+html[data-theme="dark"] .border-neutral-100, html[data-theme="dark"] .border-neutral-200,
+html[data-theme="dark"] .border-neutral-300 { border-color: #34445a !important; }
+html[data-theme="dark"] :is(input, select, textarea):focus { outline-color: #67e8f9; }

@@ -13,6 +13,7 @@ import { emptyToUndefined, slugParam } from "./common";
 export interface SearchParams {
   city?: string;
   area?: string;
+  query?: string;
   types: PropertyType[];
   audiences: Audience[];
   facilities: string[];
@@ -45,6 +46,7 @@ const scalar = z.object({
   city: slugParam.optional().catch(undefined),
   // Area accepts a known English/Bangla alias as well as a canonical slug; the loader resolves it against the selected city.
   area: z.preprocess(emptyToUndefined, z.string().trim().max(80).optional()).catch(undefined),
+  q: z.preprocess(emptyToUndefined, z.string().trim().max(100).optional()).catch(undefined),
   min_price: num(0, 100_000_000).optional().catch(undefined),
   max_price: num(0, 100_000_000).optional().catch(undefined),
   available_from: z.iso.date().optional().catch(undefined),
@@ -63,7 +65,7 @@ const scalar = z.object({
  */
 export function parseSearchParams(sp: URLSearchParams): SearchParams {
   const raw: Record<string, string | undefined> = {};
-  for (const key of ["city", "area", "min_price", "max_price", "available_from", "lat", "lng", "radius", "sort", "page"]) {
+  for (const key of ["city", "area", "q", "min_price", "max_price", "available_from", "lat", "lng", "radius", "sort", "page"]) {
     const value = sp.get(key);
     raw[key] = value === null || value.trim() === "" ? undefined : value.trim();
   }
@@ -73,6 +75,7 @@ export function parseSearchParams(sp: URLSearchParams): SearchParams {
   return {
     city: s.city,
     area: s.area,
+    query: s.q,
     types: list(sp, "type").filter((v): v is PropertyType => isMember(PROPERTY_TYPES, v)),
     audiences: list(sp, "audience").filter((v): v is Audience => isMember(AUDIENCES, v)),
     facilities: list(sp, "facility", "facilities").filter((v) => slugParam.safeParse(v).success),
