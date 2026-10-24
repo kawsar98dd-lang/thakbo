@@ -18,21 +18,24 @@ import { getPublishedListingBySlug } from "~/server/db/repositories/listings";
 import { getPublicListingExtras, isListingFavorite, isPublishedListingOwner, submitListingReport, toggleListingFavorite } from "~/server/db/repositories/engagement";
 import { notFound } from "~/server/errors.server";
 import { requireUser } from "~/server/session.server";
+import { getListingViewCount, trackPageView } from "~/server/analytics/analytics.server";
 
 const REPORT_LABELS: Record<ReportReason, string> = {
   fake_listing: "Fake listing", wrong_information: "Incorrect information", already_rented: "Already rented",
   inappropriate_content: "Inappropriate content", spam: "Spam", duplicate: "Duplicate listing", other: "Other",
 };
 
-export async function loader({ params, context }: Route.LoaderArgs) {
+export async function loader({ params, context, request }: Route.LoaderArgs) {
   const slug = slugParam.safeParse(params.slug);
   if (!slug.success) throw notFound();
   const { env } = context.get(cloudflareContext);
   const listing = await getPublishedListingBySlug(env.DB, slug.data);
   if (!listing) throw notFound();
-  const [extras, user] = await Promise.all([
+  const analyticsHeaders = await trackPageView(env.DB, request, `listing:${listing.id}`, "listing", listing.id);
+  const [extras, user, viewCount] = await Promise.all([
     getPublicListingExtras(env.DB, slug.data),
     Promise.resolve(context.get(currentUserContext)),
+    getListingViewCount(env.DB, listing.id),
   ]);
   const [favorite, isOwner] = user
     ? await Promise.all([
@@ -40,7 +43,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
         isPublishedListingOwner(env.DB, user.id, slug.data),
       ])
     : [false, false];
-  return { listing, extras, signedIn: Boolean(user), favorite, isOwner };
+  return data({ listing, extras, signedIn: Boolean(user), favorite, isOwner, viewCount }, { headers: analyticsHeaders });
 }
 
 export async function action({ params, context, request }: Route.ActionArgs) {
@@ -84,7 +87,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
 }
 
 export default function ListingPage({ loaderData, actionData }: Route.ComponentProps) {
-  const { listing, extras, signedIn, favorite, isOwner } = loaderData;
+  const { listing, extras, signedIn, favorite, isOwner, viewCount } = loaderData;
   const monthly = estimateMonthlyCost(listing);
   const phone = normalizeContactNumber(extras.phone);
   const whatsapp = normalizeContactNumber(extras.whatsapp);
@@ -126,6 +129,7 @@ export default function ListingPage({ loaderData, actionData }: Route.ComponentP
               <Badge tone={listing.availabilityStatus === "available" || listing.availabilityStatus === "available_from" ? "neutral" : "warning"}>{AVAILABILITY_LABELS[listing.availabilityStatus]}</Badge>
             </div>
             <p className="text-2xl font-bold text-brand-800">{formatTaka(listing.rentAmount)} <span className="text-sm font-normal text-slate-600">/ month</span></p>
+            <p className="text-sm text-slate-600" aria-label="Listing views">👁️ Viewed <strong className="tabular-nums text-slate-800">{new Intl.NumberFormat("en-BD").format(viewCount)}</strong> times</p>
             {monthly !== null ? <p className="text-sm text-slate-600">Estimated monthly total: <strong>{formatTaka(monthly)}</strong></p> : null}
             {listing.advanceAmount !== null ? <p className="text-sm text-slate-600">Advance / deposit: {formatTaka(listing.advanceAmount)}</p> : null}
             {listing.availableFrom ? <p className="text-sm text-slate-600">Available from: {listing.availableFrom}</p> : null}

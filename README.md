@@ -191,7 +191,7 @@ The workflow **THAKBO Initialize Production D1** (`.github/workflows/initialize-
 ### What it does, in order
 1. **Safety checks** — only on `main`; for `apply` you must type `THAKBO-DB`; both GitHub secrets must exist.
 2. **Self-test** of the tooling (offline, fake wrangler on real SQLite).
-3. **Preflight** — checks the 11 migration files are in the required order (0000 … 0010) and that no migration/seed contains destructive SQL (the only `DROP` allowed is the audience-table rebuild in 0007, which copies every row first); finds the **one existing** database named `thakbo-db` (by name, through the Cloudflare API) and reads its migration state. If the name is missing or ambiguous it stops. It does not edit `wrangler.jsonc`: the database id is written to a temporary config that is deleted at the end and never committed.
+3. **Preflight** — checks the 12 migration files are in the required order (0000 … 0011) and that no migration/seed contains destructive SQL (the only `DROP` allowed is the audience-table rebuild in 0007, which copies every row first); finds the **one existing** database named `thakbo-db` (by name, through the Cloudflare API) and reads its migration state. If the name is missing or ambiguous it stops. It does not edit `wrangler.jsonc`: the database id is written to a temporary config that is deleted at the end and never committed.
 4. **Migrate** — `wrangler d1 migrations apply thakbo-db --remote`. Wrangler records every applied file in the table `d1_migrations` (set explicitly in the temporary config), so applied files are skipped on re-runs. If something fails part-way the workflow stops: **no seeding, no verification**.
 5. **Seed** — `db/seeds/0001_reference_data.sql`, then `db/seeds/0002_neighborhoods_and_facilities.sql` (unchanged files, idempotent), only after all migrations succeeded. Re-running re-applies the seed-managed names/labels of the seeded places and facilities; rows you add yourself are untouched.
 6. **Verify** — the run fails unless everything below is true.
@@ -212,7 +212,7 @@ It refuses to continue (and changes nothing) when the database **already has tab
 ### Expected verification results (fresh database, after `apply`)
 | Check | Expected |
 |---|---|
-| Migrations recorded | `11/11` in the order 0000 … 0010 (current source migration set) |
+| Migrations recorded | `12/12` in the order 0000 … 0011 (current source migration set) |
 | Required tables | `22/22` (Better Auth: user, session, account, verification, rateLimit; THAKBO tables; `d1_migrations`) |
 | countries / divisions / districts / cities | `1/1/1/1` (Bangladesh, Rajshahi division, Rajshahi district, Rajshahi city with Bangla name) |
 | Rajshahi active areas | `10` (Hetem Khan, Ghoshpara, Shaheb Bazar, Talaimari, Kazla, Motihar, Binodpur, Upashahar, Laxmipur, Sopura) |
@@ -288,7 +288,7 @@ No secret is ever stored in Git. `.env.example` documents the names only. THAKBO
 2. **R2:** *R2 object storage → Create bucket* → name `thakbo-media` (R2 may ask for a payment method to enable its free tier — check Cloudflare's current terms).
 3. **Connect the Worker:** *Workers & Pages → Create → Import a repository* → choose your GitHub repo. Build command `npm run build`, deploy command `npx wrangler deploy`.
 4. **Bind the database:** For predictable migrations and remote database operations, create/identify `thakbo-db` and add its real `database_id` to the `d1_databases` entry using GitHub's web editor. Do not rely on automatic provisioning: this ZIP cannot verify how your authenticated deploy path will behave. Set the actual ID for a predictable deployment and migration workflow. Do not guess an ID.
-5. **Create the tables:** use the repository's documented GitHub Actions workflow `THAKBO Initialize Production D1` in `check` mode first. Do not paste only some migrations by hand; the current project has migrations `0000` through `0010` and a guarded workflow that checks the existing database before applying them.
+5. **Create the tables:** use the repository's documented GitHub Actions workflow `THAKBO Initialize Production D1` in `check` mode first. Do not paste only some migrations by hand; the current project has migrations `0000` through `0011` and a guarded workflow that checks the existing database before applying them.
 6. **Secret:** Worker → *Settings → Variables and Secrets → Add* → `BETTER_AUTH_SECRET` = a long random text (type "Secret").
 7. Open `https://<your-worker>/api/health` — expected `{"status":"ok","database":"ok"}`.
 

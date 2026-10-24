@@ -47,6 +47,7 @@ EXPECTED_MIGRATIONS = [
     "0008_listing_moderation.sql",
     "0009_contact_messages.sql",
     "0010_moderation_audit_retention.sql",
+    "0011_visitor_analytics.sql",
 ]
 SEED_FILES = [
     "db/seeds/0001_reference_data.sql",
@@ -60,6 +61,7 @@ REQUIRED_TABLES = [
     "profiles", "admin_users", "countries", "divisions", "districts", "cities", "areas", "area_aliases",
     "facilities", "listings", "listing_images", "listing_facilities", "listing_audiences", "favorites", "reports", "contact_messages",
     "listing_moderation_events",
+    "analytics_daily_views", "analytics_view_dedup",
     MIGRATIONS_TABLE,
 ]
 

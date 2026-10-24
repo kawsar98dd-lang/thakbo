@@ -1,0 +1,33 @@
+THAKBO Phase 47 — আপনার করণীয়
+
+এই আপডেটেড ZIP-এ Visitor Analytics ফিচারের সোর্স কোড, নতুন D1 migration, production migration-check script/test আপডেট এবং source review-এ পাওয়া listing loader-এর request-সংক্রান্ত ভুলের সংশোধন আছে। আমি আপনার Cloudflare অ্যাকাউন্টে লগইন করে কোনো migration চালাইনি, লাইভ সাইটে deploy করিনি এবং production database পরিবর্তন করিনি।
+
+যা যাচাই হয়েছে: SQLite-এ ১২টি migration ও seed পরীক্ষা সফল, production database workflow-এর ৪৯টি test সফল, security-config-এর ৪টি test এবং preview-config-এর ৭টি test সফল। DNT: 1 ও Sec-GPC: 1 থাকলে analytics tracking বন্ধ রাখার ব্যবস্থা যোগ করা হয়েছে।
+
+গুরুত্বপূর্ণ: আমার পরিবেশে npm ci সময়সীমার মধ্যে শেষ হয়নি। এখানে Node 22.16.0, কিন্তু প্রকল্পের জন্য 22.22.0 প্রয়োজন। তাই TypeScript, ESLint, Vitest-এর সম্পূর্ণ suite এবং production build এখনও যাচাই করা যায়নি। এই ZIP-কে এখনই production-ready ধরে deploy করবেন না।
+
+আপনার করণীয়:
+1. ZIP extract করে GitHub repository-তে সোর্স আপডেট করুন।
+2. GitHub Actions / THAKBO CI চালান এবং সব check green না হওয়া পর্যন্ত deploy করবেন না। Node version `.nvmrc`-এ 22.22.0।
+3. প্রথমে আলাদা Cloudflare Preview D1-এ `0011_visitor_analytics.sql` migration প্রয়োগ করুন। Preview-তে home counter, listing view count এবং `/admin/analytics` পরীক্ষা করুন।
+4. Production-এর আগে সঠিক `thakbo-db` database ID নিশ্চিত করুন। `wrangler.jsonc`-এ production D1 ID বর্তমানে নেই; Preview ID কখনো Production-এ বসাবেন না।
+5. Production D1 backup ও rollback পরিকল্পনা ছাড়া migration প্রয়োগ করবেন না।
+6. Preview-তে সব ঠিক থাকলে তবেই production migration ও deployment করুন।
+
+এই সংস্করণে ভিউ গণনা:
+- হোমপেজ ও প্রকাশিত listing detail page ট্র্যাক করে।
+- একই ব্রাউজার একই পেজ একই UTC দিনে বারবার খুললে একবার গণনা হয়। তাই এটি exact unique human count নয়।
+- কিছু পরিচিত bot বাদ দেওয়া হয়; bot filtering শতভাগ নয়।
+- raw IP address বা account ID analytics টেবিলে রাখা হয় না।
+- Admin Analytics পেজে server-side admin permission যাচাই থাকে।
+
+যে কাজ আমি এখান থেকে করতে পারিনি:
+- আপনার GitHub-এ push/commit
+- Cloudflare Preview/Production database backup
+- বাস্তব Cloudflare D1 migration apply
+- live deployment ও live smoke test
+- পূর্ণ npm check (dependency install timeout হয়েছে)
+
+কোনো API key, password, Cloudflare token বা `.env` ফাইল চ্যাটে পাঠাবেন না।
+
+অতিরিক্ত CI precheck (2026-10-24): verify-ci-workflow.py, verify-ci-workflow-test.py (৪), verify-sql.py, production_db_test.py (৪৯), storage_tools_test.py (৬), check-preview-config-test.py (৭), check-security-config-test.py (৪), security strict audit এবং analytics SQL smoke test সফল। তবে npm registry DNS error (EAI_AGAIN) হওয়ায় npm ci সম্পন্ন হয়নি; ফলে TypeScript, ESLint, Vitest এবং build এখনো সফলভাবে চালানো হয়নি। পূর্ণ CI GitHub Actions-এ চালানো আবশ্যক। বিস্তারিত: docs/reports/phase-47-ci-precheck-2026-10-24.md

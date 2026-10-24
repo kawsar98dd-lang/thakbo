@@ -22,6 +22,7 @@ export default function AdminOverview({ loaderData }: Route.ComponentProps) {
     { label: "Waiting for review", value: statsValue(loaderData.pending), to: `${PATHS.adminListings}?status=pending` },
     { label: "Pending reports", value: statsValue(loaderData.pendingReports), to: PATHS.adminReports },
     { label: "Open contact messages", value: statsValue(loaderData.openContactMessages), to: PATHS.adminContactMessages },
+    { label: "Visitor analytics", value: "View reports", to: PATHS.adminAnalytics },
   ];
   return <>
     <PageHeader title="Admin overview" description="A live summary of the THAKBO database and shortcuts to moderation." />

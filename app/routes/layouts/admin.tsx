@@ -23,6 +23,7 @@ export default function AdminLayout() {
         label="Admin"
         items={[
           { to: PATHS.admin, label: "Overview", end: true },
+          { to: PATHS.adminAnalytics, label: "Visitor analytics" },
           { to: PATHS.adminUsers, label: "Users" },
           { to: PATHS.adminListings, label: "Listings" },
           { to: PATHS.adminReports, label: "Reports" },

@@ -1,4 +1,4 @@
-import { Form, Link } from "react-router";
+import { data, Form, Link } from "react-router";
 import type { Route } from "./+types/home";
 import { SelectField } from "~/components/forms/SelectField";
 import { PageContainer } from "~/components/layout/PageContainer";
@@ -14,6 +14,7 @@ import { listActiveAreas, listActiveCities, type Area, type City } from "~/serve
 import { searchListings, type ListingCard as ListingCardData } from "~/server/db/repositories/listings";
 import { parseSearchParams } from "~/lib/validation/search";
 import { logger } from "~/server/logger.server";
+import { getPublicAnalytics, trackPageView } from "~/server/analytics/analytics.server";
 
 export const meta = () => buildMeta({
   title: "THAKBO (থাকবো) | বাংলাদেশে বাসা, রুম ও মেস ভাড়া খুঁজুন",
@@ -37,8 +38,10 @@ interface PopularPlace {
 
 const RECENT_LISTINGS_LIMIT = 12;
 
-export async function loader({ context }: Route.LoaderArgs): Promise<{ cities: City[]; popular: PopularPlace[]; recentListings: ListingCardData[]; hasMoreListings: boolean }> {
+export async function loader({ context, request }: Route.LoaderArgs) {
   const { env } = context.get(cloudflareContext);
+  const analyticsHeaders = await trackPageView(env.DB, request, "home", "page");
+  const analytics = await getPublicAnalytics(env.DB);
   let cities: City[] = [];
   let popular: PopularPlace[] = [];
   let recentListings: ListingCardData[] = [];
@@ -67,11 +70,11 @@ export async function loader({ context }: Route.LoaderArgs): Promise<{ cities: C
     logger.warn("home: recent listing lookup failed", { error });
   }
 
-  return { cities, popular, recentListings, hasMoreListings };
+  return data({ cities, popular, recentListings, hasMoreListings, analytics }, { headers: analyticsHeaders });
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {
-  const { cities, popular, recentListings, hasMoreListings } = loaderData;
+  const { cities, popular, recentListings, hasMoreListings, analytics } = loaderData;
   return (
     <>
       <JsonLdScript data={websiteStructuredData} />
@@ -163,6 +166,23 @@ export default function Home({ loaderData }: Route.ComponentProps) {
               <ButtonLink to={PATHS.newListing} className="mt-4" size="lg">List a Place</ButtonLink>
             </div>
           )}
+        </section>
+
+        <section aria-labelledby="public-statistics-heading" className="rounded-3xl border border-brand-100 bg-gradient-to-br from-brand-50 via-white to-white p-5 shadow-sm sm:p-7">
+          <p className="section-kicker">THAKBO in numbers</p>
+          <h2 id="public-statistics-heading" className="mt-1 text-xl font-extrabold tracking-tight sm:text-2xl">Our growing community</h2>
+          <p className="mt-1 text-sm text-slate-600">Real page-view statistics recorded by THAKBO. Automated bots are excluded where detectable.</p>
+          <dl className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {[
+              { label: "Published places", value: analytics.publishedListings },
+              { label: "Tracked page views", value: analytics.totalPageViews },
+              { label: "Listing views", value: analytics.totalListingViews },
+              { label: "Views today", value: analytics.todayPageViews },
+            ].map((item) => <div key={item.label} className="rounded-2xl border border-slate-200 bg-white p-4">
+              <dt className="text-xs font-semibold text-slate-600 sm:text-sm">{item.label}</dt>
+              <dd className="mt-2 text-2xl font-extrabold tabular-nums text-brand-800 sm:text-3xl">{new Intl.NumberFormat("en-BD").format(item.value)}</dd>
+            </div>)}
+          </dl>
         </section>
 
         <Card className="home-owner-cta flex flex-wrap items-center justify-between gap-5 border-brand-100 bg-gradient-to-r from-white to-brand-50/70 p-5 sm:p-7">

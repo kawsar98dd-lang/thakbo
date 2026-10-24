@@ -19,6 +19,7 @@ export const PATHS = {
   myListings: "/dashboard/listings",
   newListing: "/dashboard/listings/new",
   admin: "/admin",
+  adminAnalytics: "/admin/analytics",
   adminUsers: "/admin/users",
   adminListings: "/admin/listings",
   adminReports: "/admin/reports",

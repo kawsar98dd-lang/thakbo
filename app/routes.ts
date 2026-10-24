@@ -48,6 +48,7 @@ export default [
     // Admin area. The layout middleware checks the admin_users table on the server.
     layout("routes/layouts/admin.tsx", [
       route("admin", "routes/admin/index.tsx"),
+      route("admin/analytics", "routes/admin/analytics.tsx"),
       route("admin/users", "routes/admin/users.tsx"),
       route("admin/listings", "routes/admin/listings.tsx"),
       route("admin/listings/:id", "routes/admin/listing-review.tsx"),
